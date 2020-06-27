@@ -13,9 +13,15 @@ Imports:
     golem,
     shiny,
     shinydashboardPlus,
-    shinydashboard
+    shinydashboard,
+    lubridate,
+    stringr,
+    data.table,
+    magrittr
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
 Depends: 
     R (>= 2.10)
+Suggests: 
+    testthat
