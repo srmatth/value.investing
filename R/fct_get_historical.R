@@ -1,16 +1,24 @@
-#' Get Nasdaq Historical Stock Prices
+#' Get Nasdaq Historical Prices
 #' 
 #' Retrieves the historical prices for stocks from Nasdaq.com
 #'
 #' @param ticker a string, the ticker for the company you wish to see data
 #' @param years an integer, how many years back you want the data to go (must
 #'   be 10 or less)
+#' @param type a string specifying the type of ticker you have
+#'   
+#' @details Further specifications regarding the `type` parameter.
+#' \itemize{
+#'   \item{if stock, `type` = "stocks"}
+#'   \item{if ETF, `type` = "etf"}
+#'   \item{if mutual fund, `type` = "mutualfunds"}
+#' }
 #'
 #' @return a data.frame containing historical information about the stock
 #' @export 
 #'
 #' @examples
-get_nasdaq_historical_prices <- function(ticker, years = 10) {
+get_nasdaq_historical_prices <- function(ticker, years = 10, type = "stocks") {
   if (years > 10) {
     usethis::ui_oops("years must be <= 10, you entered {years}")
     return(NULL)
@@ -21,7 +29,9 @@ get_nasdaq_historical_prices <- function(ticker, years = 10) {
       stringr::str_c(
         "https://www.nasdaq.com/api/v1/historical/",
         ticker,
-        "/stocks/",
+        "/",
+        type,
+        "/",
         lubridate::date(lubridate::now() - lubridate::years(years)), 
         "/",
         Sys.Date() - 1
@@ -47,6 +57,6 @@ get_nasdaq_historical_prices <- function(ticker, years = 10) {
     return(tmp_data)
   },
   error = function(e) {
-    usethis::ui_oops("{ticker} was not found on NASDAQ")
+    usethis::ui_oops("{ticker} was not found on NASDAQ with '{type}' type")
   })
 }
