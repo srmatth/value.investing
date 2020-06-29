@@ -17,7 +17,10 @@ Imports:
     lubridate,
     stringr,
     data.table,
-    magrittr
+    magrittr,
+    xml2,
+    rvest,
+    janitor
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.0
