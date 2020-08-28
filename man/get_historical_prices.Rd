@@ -4,15 +4,15 @@
 \alias{get_historical_prices}
 \title{Get Historical Prices}
 \usage{
-get_historical_prices(ticker, years = 10, type = "stocks", verbose = TRUE)
+get_historical_prices(ticker, type = "stocks", years = 10, verbose = TRUE)
 }
 \arguments{
 \item{ticker}{a string, the ticker for the company you wish to see data}
 
+\item{type}{a string specifying the type of ticker you have}
+
 \item{years}{an integer, how many years back you want the data to go (must
 be 10 or less)}
-
-\item{type}{a string specifying the type of ticker you have}
 
 \item{verbose}{logical specifying if the function should be chatty}
 }

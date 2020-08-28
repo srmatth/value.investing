@@ -9,13 +9,15 @@ app_ui <- function(request) {
     # Leave this function for adding external resources
     golem_add_external_resources(),
     # List the first level UI elements here 
-    shinydashboardPlus:dashboardPagePlus(
-      header = shinydashboard::dashboardHeader(
+    shinydashboardPlus::dashboardPagePlus(
+      header = shinydashboardPlus::dashboardHeaderPlus(
         title = "Stock Trends"
       ),
-      sidebar = shinydashboard::dashboardSidebar(),
+      sidebar = shinydashboard::dashboardSidebar(disable = TRUE),
       body = shinydashboard::dashboardBody(
-        mod_main_page_ui("main_page_ui_1")
+        tabsetPanel(
+          mod_main_page_ui("main_page_ui_1")
+        )
       )
     )
   )
