@@ -5,6 +5,9 @@
 \title{Get Filtered Stocks}
 \usage{
 get_filtered_stocks(
+  geo = "geo_usa",
+  ind = "ind_any",
+  sec = "sec_any",
   exchange = "exch_any",
   cap = "cap_any",
   fa_div = "any",

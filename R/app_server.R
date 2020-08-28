@@ -5,6 +5,9 @@
 #' @import shiny
 #' @noRd
 app_server <- function( input, output, session ) {
-  # List the first level callModules here
-  callModule(mod_main_page_server, "main_page_ui_1")
+  callModule(mod_historical_server, "historical_ui_1")
+  callModule(mod_training_server, "training_ui_1")
+  callModule(mod_prediction_server, "prediction_ui_1")
+  callModule(mod_performance_server, "performance_ui_1")
+  callModule(mod_watch_server, "watch_ui_1")
 }

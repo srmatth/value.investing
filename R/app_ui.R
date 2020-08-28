@@ -5,21 +5,16 @@
 #' @import shiny
 #' @noRd
 app_ui <- function(request) {
-  tagList(
-    # Leave this function for adding external resources
-    golem_add_external_resources(),
-    # List the first level UI elements here 
-    shinydashboardPlus::dashboardPagePlus(
-      header = shinydashboardPlus::dashboardHeaderPlus(
-        title = "Stock Trends"
-      ),
-      sidebar = shinydashboard::dashboardSidebar(disable = TRUE),
-      body = shinydashboard::dashboardBody(
-        tabsetPanel(
-          mod_main_page_ui("main_page_ui_1")
-        )
-      )
-    )
+  navbarPage(
+    title = "Stock Analysis and Prediction",
+    fluid = TRUE,
+    theme = shinythemes::shinytheme("flatly"),
+    collapsible = TRUE,
+      mod_historical_ui("historical_ui_1"),
+      mod_training_ui("training_ui_1"),
+      mod_prediction_ui("prediction_ui_1"),
+      mod_performance_ui("performance_ui_1"),
+      mod_watch_ui("watch_ui_1")
   )
 }
 

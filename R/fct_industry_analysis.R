@@ -264,8 +264,8 @@ get_models <- function(industry) {
   all_preds <- rbind(preds_f1, preds_98) %>%
     dplyr::arrange(desc(yes))
   
-  h2o::h2o.saveModel(final_mod_f1, path)
-  h2o::h2o.saveModel(final_mod_98, path)
+  h2o::h2o.saveModel(final_mod_f1, path, force = TRUE)
+  h2o::h2o.saveModel(final_mod_98, path, force = TRUE)
   
   readr::write_csv(results, paste0(path, "/rf_tuning_results.csv"))
   readr::write_csv(varimp, paste0(path, "/rf_varimp.csv"))
@@ -276,7 +276,7 @@ get_models <- function(industry) {
     varimp = varimp,
     best_model_98 = best_model_98,
     best_model_f1 = best_model_f1,
-    preds = preds
+    preds = all_preds
   )
 }
 
@@ -345,8 +345,24 @@ download_prices <- function(tickers, dir) {
   remDr$quit()
 }
 
-test <- get_models("autoparts")
-test2 <- get_models(industry = "airportsairservices")
+# test <- get_models("autoparts")
+# test2 <- get_models(industry = "airportsairservices")
+
+# industries <- c(
+#   "airlines",
+#   "airportsairservices",
+#   "aluminum",
+#   "apparelmanufacturing",
+#   "apparelretial"
+# )
+# 
+# big_list <- purrr::map(
+#   .x = industries,
+#   .f = get_models
+# )
+
+
+
 
 # dir <- "/Users/spencer.matthews/Documents/Investing/data/sector_communication_services/ind_publishing"
 # tickers <- get_filtered_stocks(ind = "ind_publishing")$ticker
