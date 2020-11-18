@@ -1,10 +1,10 @@
-get_models <- function(industry) {
+get_models <- function(industry, macrotrends = FALSE, skip = 0) {
   usethis::ui_info("Getting the tickers for {industry}")
   path <- stringr::str_c("/Users/spencer.matthews/Documents/Investing/industries/", industry)
   tickers <- get_filtered_stocks(ind = stringr::str_c("ind_", industry), geo = "geo_any")$ticker
   if (!fs::dir_exists(path)) {
     fs::dir_create(path)
-    download_prices(tickers, path)
+    download_prices(tickers, path, macrotrends)
   }
   
   usethis::ui_info("Getting Ratio Data")
@@ -23,7 +23,7 @@ get_models <- function(industry) {
     )
   
   usethis::ui_info("Getting Price Data")
-  price_dat <- get_price_files(path) %>%
+  price_dat <- get_price_files(path, skip) %>%
     dplyr::mutate(
       pct_change = (close - open) / open,
       year = lubridate::year(date),
@@ -98,6 +98,7 @@ get_models <- function(industry) {
       tmp_mod <- h2o::h2o.randomForest(
         y = "over_40_growth",
         training_frame = train,
+        nfolds = 3,
         model_id = "temp_forest_mod",
         ntrees = grid_sub$ntrees,
         max_depth = grid_sub$max_depth,
@@ -280,7 +281,7 @@ get_models <- function(industry) {
   )
 }
 
-get_price_files <- function(dir) {
+get_price_files <- function(dir, skip = 0) {
   files <- stringr::str_subset(fs::dir_ls(dir), "MacroTrends")
   purrr::map_dfr(
     .x = files,
@@ -289,79 +290,101 @@ get_price_files <- function(dir) {
         fs::path_file() %>%
         stringr::str_remove("MacroTrends_Data_Download_") %>%
         stringr::str_remove(".csv")
-      data.table::fread(.x, skip = 14) %>%
+      data.table::fread(.x, skip = skip) %>%
         cbind(ticker)
     }
   )
 }
 
-download_prices <- function(tickers, dir) {
-  usethis::ui_info("setting up the docker container")
-  system("docker stop $(docker ps -aq)")
-  system("docker rm $(docker ps -aq)")
-  system(
-    stringr::str_c(
-      "docker run -d -v ",
-      dir,
-      "://home/seluser/Downloads -p 4446:4444 -p 5901:5900 selenium/standalone-firefox-debug:2.53.1"
-    )
-  )
-  Sys.sleep(10)
-  
-  usethis::ui_info("initializing the selenium remote driver")
-  fprof <- RSelenium::makeFirefoxProfile(list(browser.download.dir = "/home/seluser/Downloads",
-                                   browser.download.folderList = 2L,
-                                   browser.helperApps.neverAsk.saveToDisk = "text/csv")
-  )
-  
-  remDr <- RSelenium::remoteDriver(
-    remoteServerAddr = "localhost", 
-    port = 4446L, 
-    browserName = "firefox", 
-    extraCapabilities = fprof
-  )
-  remDr$open()
-  
-  purrr::map(
-    .x = tickers,
-    .f = ~{
-      usethis::ui_info("Downloading historical daily price data for {.x}")
-      tryCatch(
-        {
-          url <- stringr::str_c(
-            "https://www.macrotrends.net/assets/php/stock_price_history.php?t=",
-            .x
-          )
-          remDr$navigate(url)
-          data_download <- remDr$findElement(using = 'css',  ".dataExport")
-          data_download$clickElement()
-        },
-        error = function(e) {
-          usethis::ui_oops("Prices not found for {.x}, \n\n {e}")
-        }
+download_prices <- function(tickers, dir, macrotrends = FALSE) {
+  if (macrotrends) {
+    usethis::ui_info("setting up the docker container")
+    system("docker stop $(docker ps -aq)")
+    system("docker rm $(docker ps -aq)")
+    system(
+      stringr::str_c(
+        "docker run -d -v ",
+        dir,
+        "://home/seluser/Downloads -p 4446:4444 -p 5901:5900 selenium/standalone-firefox-debug:2.53.1"
       )
-    }
-  )
-  remDr$quit()
+    )
+    Sys.sleep(10)
+    
+    usethis::ui_info("initializing the selenium remote driver")
+    fprof <- RSelenium::makeFirefoxProfile(list(browser.download.dir = "/home/seluser/Downloads",
+                                                browser.download.folderList = 2L,
+                                                browser.helperApps.neverAsk.saveToDisk = "text/csv")
+    )
+    
+    remDr <- RSelenium::remoteDriver(
+      remoteServerAddr = "localhost", 
+      port = 4446L, 
+      browserName = "firefox", 
+      extraCapabilities = fprof
+    )
+    remDr$open()
+    
+    purrr::map(
+      .x = tickers,
+      .f = ~{
+        usethis::ui_info("Downloading historical daily price data for {.x}")
+        tryCatch(
+          {
+            url <- stringr::str_c(
+              "https://www.macrotrends.net/assets/php/stock_price_history.php?t=",
+              .x
+            )
+            remDr$navigate(url)
+            data_download <- remDr$findElement(using = 'css',  ".dataExport")
+            data_download$clickElement()
+          },
+          error = function(e) {
+            usethis::ui_oops("Prices not found for {.x}, \n\n {e}")
+          }
+        )
+      }
+    )
+    remDr$quit()
+  } else {
+    purrr::map(
+      .x = tickers,
+      .f = ~{
+        usethis::ui_info("Downloading price data for {.x}")
+        url <- stringr::str_c(
+          "https://query1.finance.yahoo.com/v7/finance/download/",
+          .x,
+          "?period1=1&period2=",
+          1598832000,
+          "&interval=1d&events=history"
+        )
+        prices <- readr::read_csv(url, col_types = "Ddddddd") %>%
+          dplyr::select(-`Adj Close`) %>%
+          magrittr::set_colnames(c("date", "open", "high", "low", "close", "volume"))
+        readr::write_csv(
+          prices,
+          stringr::str_c(dir, "/MacroTrends_Data_Download_", .x, ".csv")
+        )
+        return(NULL)
+      }
+    )
+  }
 }
 
 # test <- get_models("autoparts")
 # test2 <- get_models(industry = "airportsairservices")
 
 # industries <- c(
-#   "airlines",
-#   "airportsairservices",
-#   "aluminum",
-#   "apparelmanufacturing",
-#   "apparelretial"
+#   "marineshipping",
+#   "publishing",
+#   "packagedfoods"
 # )
 # 
 # big_list <- purrr::map(
 #   .x = industries,
 #   .f = get_models
 # )
-
-
+# 
+# beepr::beep(9)
 
 
 # dir <- "/Users/spencer.matthews/Documents/Investing/data/sector_communication_services/ind_publishing"

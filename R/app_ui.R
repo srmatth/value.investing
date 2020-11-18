@@ -10,11 +10,12 @@ app_ui <- function(request) {
     fluid = TRUE,
     theme = shinythemes::shinytheme("flatly"),
     collapsible = TRUE,
-      mod_historical_ui("historical_ui_1"),
-      mod_training_ui("training_ui_1"),
-      mod_prediction_ui("prediction_ui_1"),
-      mod_performance_ui("performance_ui_1"),
-      mod_watch_ui("watch_ui_1")
+    mod_historical_ui("historical_ui_1"),
+    mod_training_ui("training_ui_1"),
+    mod_prediction_ui("prediction_ui_1"),
+    mod_performance_ui("performance_ui_1"),
+    mod_watch_ui("watch_ui_1"),
+    shinyWidgets::useShinydashboard()
   )
 }
 

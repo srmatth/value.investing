@@ -68,7 +68,7 @@ get_filtered_stocks <- function(geo = "geo_usa",
         dplyr::if_else(
           all_data,
           stringr::str_c(0:70, collapse = ","),
-          "1,2"
+          "1,2,65"
         )
       )
       new_data <- xml2::read_html(page) %>%
