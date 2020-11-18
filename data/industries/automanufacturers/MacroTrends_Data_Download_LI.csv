@@ -1,0 +1,37 @@
+"MacroTrends Data Download"
+"LI - Historical Price and Volume Data"
+"Note: Historical prices are adjusted for stock splits."
+
+"Disclaimer and Terms of Use: Historical stock data is provided 'as is' and solely for informational purposes, not for trading purposes or advice."
+"MacroTrends LLC expressly disclaims the accuracy, adequacy, or completeness of any data and shall not be liable for any errors, omissions or other defects in, "
+"delays or interruptions in such data, or for any actions taken in reliance thereon.  Neither MacroTrends LLC nor any of our information providers will be liable"
+"for any damages relating to your use of the data provided."
+
+
+"ATTRIBUTION: Proper attribution requires clear indication of the data source as ""www.macrotrends.net""."
+"A ""dofollow"" backlink to the originating page is also required if the data is displayed on a web page."
+
+
+date,open,high,low,close,volume
+2020-07-30,15.5000,17.5000,15.1000,16.4600,63951588
+2020-07-31,16.6700,17.1700,15.9900,16.0000,19532763
+2020-08-03,16.2600,17.0000,15.7700,16.3600,11714953
+2020-08-04,16.5500,16.8400,15.9500,16.6900,7781785
+2020-08-05,16.6490,17.0000,16.4000,16.7500,3799200
+2020-08-06,16.8000,19.9000,16.6300,18.5000,14142895
+2020-08-07,17.7500,19.3300,16.6000,16.8900,7459711
+2020-08-10,17.6000,17.7600,16.1200,16.4200,7914378
+2020-08-11,16.9300,17.0300,15.8300,16.0000,7319278
+2020-08-12,16.3600,16.3600,15.1350,15.6600,5609478
+2020-08-13,15.7000,15.7000,15.0000,15.1600,5220908
+2020-08-14,15.3500,15.3600,14.3100,14.6000,5070172
+2020-08-17,14.7600,15.6000,14.6000,15.4200,5288744
+2020-08-18,15.3635,16.7500,15.3600,15.9600,7147326
+2020-08-19,15.9800,16.0700,15.0100,15.0400,3277673
+2020-08-20,15.0600,15.3000,14.6100,14.7500,3131655
+2020-08-21,14.9400,15.5000,14.7600,15.0200,4223631
+2020-08-24,16.3000,17.2000,15.8800,17.0900,19155077
+2020-08-25,17.7965,18.8400,17.6800,18.2300,21952719
+2020-08-26,18.9900,24.4800,18.9900,23.3800,30973576
+2020-08-27,22.2600,22.3100,19.3000,19.3800,29129567
+2020-08-28,20.2100,20.5000,17.6000,17.6000,14725064

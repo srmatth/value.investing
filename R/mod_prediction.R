@@ -24,7 +24,7 @@ mod_prediction_ui <- function(id){
         selectInput(
           inputId = ns("industry"),
           label = "Select an Industry",
-          choices = c("", fs::dir_ls("/Users/spencer.matthews/Documents/Investing/industries") %>% 
+          choices = c("", fs::dir_ls("data/industries") %>% 
             fs::path_file()),
           selected = NULL,
           multiple = FALSE
@@ -88,7 +88,7 @@ mod_prediction_server <- function(input, output, session){
   predictions <- eventReactive(input$update, {
     dat <- readr::read_csv(
       stringr::str_c(
-        "/Users/spencer.matthews/Documents/Investing/industries/",
+        "data/industries/",
         isolate(input$industry),
         "/rf_preds.csv"
       )

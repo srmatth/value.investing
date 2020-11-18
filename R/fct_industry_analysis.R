@@ -1,6 +1,6 @@
 get_models <- function(industry, macrotrends = FALSE, skip = 0) {
   usethis::ui_info("Getting the tickers for {industry}")
-  path <- stringr::str_c("/Users/spencer.matthews/Documents/Investing/industries/", industry)
+  path <- stringr::str_c("data/industries/", industry)
   tickers <- get_filtered_stocks(ind = stringr::str_c("ind_", industry), geo = "geo_any")$ticker
   if (!fs::dir_exists(path)) {
     fs::dir_create(path)
