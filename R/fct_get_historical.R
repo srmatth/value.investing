@@ -80,45 +80,49 @@ get_historical_prices <- function(ticker, type = "stocks", years = 10, verbose =
 #'     \item{ticker = the ticker of the stock/fund}
 #'   }
 #' @export
-get_historical_dividends <- function(ticker, start_date = NULL, verbose = TRUE) {
-  tryCatch({
-    if (verbose) usethis::ui_info("Fetching dividend data for {ticker}")
-    page <- xml2::read_html(
-      stringr::str_c(
-        "https://www.dividendinformation.com/search_ticker/?identifier=",
-        ticker
-      )
-    )
-    dividend_data <- page %>%
-      rvest::html_nodes("table") %>%
-      `[[`(4) %>%
-      rvest::html_table() %>%
-      janitor::row_to_names(row_number = 1) %>%
-      dplyr::select(-Note) %>%
-      magrittr::set_colnames(c("date", "amount_per_share")) %>%
-      dplyr::mutate(
-        ticker = ticker,
-        amount_per_share = as.numeric(
-          stringr::str_replace_all(
-            amount_per_share, 
-            "\\$", 
-            ""
+get_historical_dividends <- function(tickers, start_date = NULL, verbose = TRUE) {
+  purrr::map_dfr(
+    .x = tickers,
+    .f = ~{
+      tryCatch({
+        if (verbose) usethis::ui_info("Fetching dividend data for {.x}")
+        page <- xml2::read_html(
+          stringr::str_c(
+            "https://www.dividendinformation.com/search_ticker/?identifier=",
+            .x
           )
-        ),
-        date = lubridate::ymd(date)
-      )
-    
-    if (!is.null(start_date)){
-      dividend_data <- dividend_data %>%
-        dplyr::filter(date >= lubridate::ymd(start_date))
-    }
-    if (verbose) usethis::ui_done("Dividend data for {ticker} downloaded")
-    return(dividend_data)
-  },
-  error = function(e) {
-    usethis::ui_oops("The ticker {ticker} does not have dividend history")
-    return(NULL)
-  })
+        )
+        dividend_data <- page %>%
+          rvest::html_nodes("table") %>%
+          `[[`(4) %>%
+          rvest::html_table() %>%
+          janitor::row_to_names(row_number = 1) %>%
+          dplyr::select(-Note) %>%
+          magrittr::set_colnames(c("date", "amount_per_share")) %>%
+          dplyr::mutate(
+            ticker = .x,
+            amount_per_share = as.numeric(
+              stringr::str_replace_all(
+                amount_per_share, 
+                "\\$", 
+                ""
+              )
+            ),
+            date = lubridate::ymd(date)
+          )
+        
+        if (!is.null(start_date)){
+          dividend_data <- dividend_data %>%
+            dplyr::filter(date >= lubridate::ymd(start_date))
+        }
+        if (verbose) usethis::ui_done("Dividend data for {.x} downloaded")
+        return(dividend_data)
+      },
+      error = function(e) {
+        usethis::ui_oops("The ticker {.x} does not have dividend history")
+        return(NULL)
+      })
+    })
 }
 
 

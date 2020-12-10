@@ -354,7 +354,7 @@ download_prices <- function(tickers, dir, macrotrends = FALSE) {
           "https://query1.finance.yahoo.com/v7/finance/download/",
           .x,
           "?period1=1&period2=",
-          1598832000,
+          as.numeric(Sys.time()),
           "&interval=1d&events=history"
         )
         prices <- readr::read_csv(url, col_types = "Ddddddd") %>%
