@@ -17,9 +17,6 @@ see.  They should be all uppercase string values}
 take on the values "pe-ratio", "price-sales", "price-book", "price-fcf",
 "debt-equity-ratio".  Defaults to all of them.  For now it is necessary 
 to include the "pe-ratio" in all queries so that the date gets returned}
-
-\item{names}{a vector of names, must be the same length as `tickers`,
-they do not need to be clean, will be formatted inside the function}
 }
 \value{
 a data frame detailing historical ratio data for each of the stocks

@@ -4,17 +4,17 @@
 \alias{get_historical_dividends}
 \title{Get Historical Dividends}
 \usage{
-get_historical_dividends(ticker, start_date = NULL, verbose = TRUE)
+get_historical_dividends(tickers, start_date = NULL, verbose = TRUE)
 }
 \arguments{
-\item{ticker}{A string identifying the ticker of the stock to get 
-information on, all caps}
-
 \item{start_date}{A string identifying the date on which the information 
 should start (ymd format), if NULL, returns all available information}
 
 \item{verbose}{Logical to determine if the function will output info
 as it runs}
+
+\item{ticker}{A string identifying the ticker of the stock to get 
+information on, all caps}
 }
 \value{
 a data frame with the following columns
