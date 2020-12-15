@@ -90,9 +90,9 @@ analyze_industry <- function(industry) {
   
   usethis::ui_info("Starting to Create models for {industry}")
   
-  random_forest_binary(.data = price_dat, industry = industry)
+  # random_forest_binary(.data = price_dat, industry = industry)
   
-  random_forest_growth(.data = price_dat, industry = industry)
+  # random_forest_growth(.data = price_dat, industry = industry)
   
   gradient_boosted_binary(.data = price_dat, industry = industry)
   
@@ -484,9 +484,6 @@ random_forest_growth <- function(.data, industry) {
         min_split_improvement = grid_sub$min_split_improvement,
         sample_rate = grid_sub$sample_rate,
         nbins = grid_sub$nbins,
-        binomial_double_trees = grid_sub$binomial_double_trees,
-        seed = grid_sub$seed,
-        balance_classes = grid_sub$balance_classes,
         col_sample_rate_per_tree = grid_sub$col_sample_rate_per_tree,
         r_2 = h2o::h2o.r2(tmp_mod),
         r_2_test = h2o::h2o.r2(perf),
@@ -551,7 +548,7 @@ random_forest_growth <- function(.data, industry) {
 
 #### gradient_boosted_binary ----
 
-gradient_boosted_binary <- function(industry) {
+gradient_boosted_binary <- function(.data, industry) {
   path <- stringr::str_c("data/industries/", industry)
   
   response <- .data %>%
@@ -591,7 +588,7 @@ gradient_boosted_binary <- function(industry) {
   
   grid <- list(
     ntrees = c(100, 300),
-    max_depth = c(1, 3, 7, 10, 15),
+    max_depth = c(1, 3, 7, 10),
     min_rows = c(1),
     distribution = c("bernoulli"),
     learn_rate = c(0.05, 0.01, 0.001),
@@ -708,7 +705,7 @@ gradient_boosted_binary <- function(industry) {
   
   mod_dat_h <- h2o::as.h2o(mod_dat)
   
-  final_mod_f1 <- h2o::h2o.randomForest(
+  final_mod_f1 <- h2o::h2o.gbm(
     y = "over_40_growth",
     training_frame = mod_dat_h,
     model_id = "final_gb_prob_mod_f1",
@@ -726,7 +723,7 @@ gradient_boosted_binary <- function(industry) {
     histogram_type = best_model_f1$histogram_type
   )
   
-  final_mod_98 <- h2o::h2o.randomForest(
+  final_mod_98 <- h2o::h2o.gbm(
     y = "over_40_growth",
     training_frame = mod_dat_h,
     model_id = "final_gb_prob_mod_98",
@@ -788,7 +785,7 @@ gradient_boosted_binary <- function(industry) {
 
 #### gradient_boosted_growth ----
 
-gradient_boosted_growth <- function(industry) {
+gradient_boosted_growth <- function(.data, industry) {
   path <- stringr::str_c("data/industries/", industry)
   
   response <- .data %>%
@@ -827,7 +824,7 @@ gradient_boosted_growth <- function(industry) {
     ntrees = c(100, 300),
     max_depth = c(1, 3, 7, 10),
     min_rows = c(1),
-    distribution = c("gaussian", "gamma"),
+    distribution = c("gaussian"),
     learn_rate = c(0.05, 0.01, 0.001),
     learn_rate_annealing = c(0.99, 0.9, 0.5),
     min_split_improvement = c(.0001),
