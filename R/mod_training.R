@@ -17,7 +17,7 @@ mod_training_ui <- function(id){
 #' training Server Function
 #'
 #' @noRd 
-mod_training_server <- function(input, output, session){
+mod_training_server <- function(input, output, session, rv){
   ns <- session$ns
  
 }

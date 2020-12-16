@@ -20,14 +20,25 @@ app_ui <- function(request) {
       )
     ),
     fluidRow(
-      
+      column(
+        width = 5,
+        mod_top_tickers_ui("top_tickers_ui_1")
+      ),
+      column(
+        width = 7,
+        mod_bubble_chart_ui("bubble_chart_ui_1")
+      )
     ),
     fluidRow(
-      
+      mod_ind_prices_ui("ind_prices_ui_1")
     ),
-    #mod_training_ui("training_ui_1"),
-    #mod_prediction_ui("prediction_ui_1"),
-    #mod_performance_ui("performance_ui_1"),
+    fluidRow(
+      # Specific data for each ticker (maybe quarter?) including growth to date
+      mod_prediction_ui("prediction_ui_1")
+    ),
+    fluidRow(
+      # mod_training_ui("training_ui_1")
+    ),
     shinyWidgets::useShinydashboard()
   )
 }
