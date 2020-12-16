@@ -5,14 +5,29 @@
 #' @import shiny
 #' @noRd
 app_ui <- function(request) {
-  navbarPage(
-    title = "Stock Analysis and Prediction",
-    fluid = TRUE,
+  fluidPage(
     theme = shinythemes::shinytheme("flatly"),
-    collapsible = TRUE,
-    mod_training_ui("training_ui_1"),
-    mod_prediction_ui("prediction_ui_1"),
-    mod_performance_ui("performance_ui_1"),
+    titlePanel("Industry Specific Stock Analysis and Prediction"),
+    hr(),
+    fluidRow(
+      column(
+        width = 3,
+        mod_input_ui("input_ui_1")
+      ),
+      column(
+        width = 9,
+        mod_top_vals_ui("top_vals_ui_1")
+      )
+    ),
+    fluidRow(
+      
+    ),
+    fluidRow(
+      
+    ),
+    #mod_training_ui("training_ui_1"),
+    #mod_prediction_ui("prediction_ui_1"),
+    #mod_performance_ui("performance_ui_1"),
     shinyWidgets::useShinydashboard()
   )
 }
