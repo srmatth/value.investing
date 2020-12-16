@@ -90,9 +90,9 @@ analyze_industry <- function(industry) {
   
   usethis::ui_info("Starting to Create models for {industry}")
   
-  # random_forest_binary(.data = price_dat, industry = industry)
+  random_forest_binary(.data = price_dat, industry = industry)
   
-  # random_forest_growth(.data = price_dat, industry = industry)
+  random_forest_growth(.data = price_dat, industry = industry)
   
   gradient_boosted_binary(.data = price_dat, industry = industry)
   
