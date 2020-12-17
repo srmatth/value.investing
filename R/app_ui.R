@@ -40,8 +40,7 @@ app_ui <- function(request) {
     h3("Model Analysis"),
     hr(),
     fluidRow(
-      # put some sort of analysis about each "best" model here, maybe a tabpanel box
-      # include model metrics, as well as model explanation measures for the test dataset
+      mod_models_ui("models_ui_1")
     ),
     hr(),
     h3("Model Tuning Results"),
