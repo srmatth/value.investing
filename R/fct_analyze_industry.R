@@ -215,7 +215,7 @@ random_forest_binary <- function(.data, industry) {
     grid_sub <- grid %>% dplyr::slice(i)
     
     tryCatch({
-      usethis::ui_info("Starting model {i}")
+      usethis::ui_info("Starting DRF prob model {i}")
       tictoc::tic(stringr::str_c("model", i, sep = " "))
       tmp_mod <- h2o::h2o.randomForest(
         y = "over_40_growth",
@@ -372,8 +372,8 @@ random_forest_binary <- function(.data, industry) {
   h2o::h2o.saveModel(final_mod_f1, path, force = TRUE)
   h2o::h2o.saveModel(final_mod_98, path, force = TRUE)
   
-  readr::write_csv(results, paste0(path, "/rf_binary_tuning_results.csv"))
-  readr::write_csv(all_preds, paste0(path, "/rf_binary_preds.csv"))
+  readr::write_csv(results, paste0(path, "/rf_prob_tuning_results.csv"))
+  readr::write_csv(all_preds, paste0(path, "/rf_prob_preds.csv"))
 }
 
 #### random_forest_growth ----
@@ -387,7 +387,7 @@ random_forest_growth <- function(.data, industry) {
     dplyr::mutate(quarter = quarter - 3, avg_future_price = avg_price) %>%
     dplyr::select(-avg_price)
   
-  usethis::ui_info("Compiling model Data for {industry} DRF binary models")
+  usethis::ui_info("Compiling model Data for {industry} DRF growth models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
@@ -440,7 +440,7 @@ random_forest_growth <- function(.data, industry) {
     grid_sub <- grid %>% dplyr::slice(i)
     
     tryCatch({
-      usethis::ui_info("Starting model {i}")
+      usethis::ui_info("Starting DRF growth model {i}")
       tictoc::tic(stringr::str_c("model", i, sep = " "))
       tmp_mod <- h2o::h2o.randomForest(
         y = "three_year_growth",
@@ -556,7 +556,7 @@ gradient_boosted_binary <- function(.data, industry) {
     dplyr::mutate(quarter = quarter - 3, avg_future_price = avg_price) %>%
     dplyr::select(-avg_price)
   
-  usethis::ui_info("Compiling model Data for {industry} GB binary models")
+  usethis::ui_info("Compiling model Data for {industry} GB prob models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
@@ -620,7 +620,7 @@ gradient_boosted_binary <- function(.data, industry) {
     grid_sub <- grid %>% dplyr::slice(i)
     
     tryCatch({
-      usethis::ui_info("Starting model {i}")
+      usethis::ui_info("Starting GB prob model {i}")
       tictoc::tic(stringr::str_c("model", i, sep = " "))
       tmp_mod <- h2o::h2o.gbm(
         y = "over_40_growth",
@@ -661,7 +661,6 @@ gradient_boosted_binary <- function(.data, industry) {
         n_no_train = n_no_train,
         n_yes_test = n_yes_test,
         n_no_test = n_no_test,
-        ntrees = grid_sub$ntrees,
         ntrees = grid_sub$ntrees,
         max_depth = grid_sub$max_depth,
         min_rows = grid_sub$min_rows,
@@ -793,7 +792,7 @@ gradient_boosted_growth <- function(.data, industry) {
     dplyr::mutate(quarter = quarter - 3, avg_future_price = avg_price) %>%
     dplyr::select(-avg_price)
   
-  usethis::ui_info("Compiling model data for {industry} GB binary models")
+  usethis::ui_info("Compiling model data for {industry} GB growth models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
@@ -849,7 +848,7 @@ gradient_boosted_growth <- function(.data, industry) {
     grid_sub <- grid %>% dplyr::slice(i)
     
     tryCatch({
-      usethis::ui_info("Starting model {i}")
+      usethis::ui_info("Starting GB growth model {i}")
       tictoc::tic(stringr::str_c("model", i, sep = " "))
       tmp_mod <- h2o::h2o.gbm(
         y = "three_year_growth",
