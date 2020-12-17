@@ -36,8 +36,19 @@ app_ui <- function(request) {
       # Specific data for each ticker (maybe quarter?) including growth to date
       mod_prediction_ui("prediction_ui_1")
     ),
+    hr(),
+    h3("Model Analysis"),
+    hr(),
     fluidRow(
-      # mod_training_ui("training_ui_1")
+      # put some sort of analysis about each "best" model here, maybe a tabpanel box
+      # include model metrics, as well as model explanation measures for the test dataset
+    ),
+    hr(),
+    h3("Model Tuning Results"),
+    hr(),
+    fluidRow(
+      mod_training_ui("training_ui_1")
+      # include parallel coordinate plots in this
     ),
     shinyWidgets::useShinydashboard()
   )
