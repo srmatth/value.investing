@@ -13,18 +13,22 @@ mod_training_ui <- function(id){
     width = 12,
     tabPanel(
       title = "RF Growth",
+      plotly::plotlyOutput(outputId = ns("rfgp")),
       DT::dataTableOutput(outputId = ns("rfg"))
     ),
     tabPanel(
       title = "RF Prob",
+      plotly::plotlyOutput(outputId = ns("rfpp")),
       DT::dataTableOutput(outputId = ns("rfp"))
     ),
     tabPanel(
       title = "GB Growth",
+      plotly::plotlyOutput(outputId = ns("gbgp")),
       DT::dataTableOutput(outputId = ns("gbg"))
     ),
     tabPanel(
       title = "GB Prob",
+      plotly::plotlyOutput(outputId = ns("gbpp")),
       DT::dataTableOutput(outputId = ns("gbp"))
     )
   )
@@ -197,6 +201,203 @@ mod_training_server <- function(input, output, session, rv){
       DT::formatRound(
         columns = c("auc", "time_to_create"),
         digits = 4
+      )
+  })
+  
+  output$rfgp <- plotly::renderPlotly({
+    readr::read_csv("data/industries/autotruckdealerships/rf_growth_tuning_results.csv") %>%
+      plotly::plot_ly(
+        type = "parcoords",
+        line = list(color = ~mod_num,
+                    colorscale = 'Jet',
+                    showscale = TRUE,
+                    reversescale = TRUE,
+                    cmin = 0,
+                    cmax = 80),
+        dimensions = list(
+          list(
+            range = c(50, 100),
+            label = "ntrees",
+            values = ~ntrees
+          ),
+          list(
+            range = c(4, 7),
+            label = "mtries",
+            values = ~mtries
+          ),
+          list(
+            range = c(4, 20),
+            label = "Nbins",
+            values = ~nbins
+          ),
+          list(
+            range = c(3, 20),
+            label = "max_depth",
+            values = ~max_depth
+          ),
+          list(
+            range = c(1e-04, 1e-03),
+            label = "min_split_improvement",
+            values = ~min_split_improvement
+          ),
+          list(
+            range = c(min(.$mae_test), max(.$mae_test)),
+            label = "MAE",
+            values = ~mae_test
+          ),
+          list(
+            range = c(min(.$mse_test), max(.$mse_test)),
+            label = "MSE",
+            values = ~mse_test
+          )
+        )
+      )
+  })
+  output$rfpp <- plotly::renderPlotly({
+    readr::read_csv("data/industries/autotruckdealerships/rf_binary_tuning_results.csv") %>%
+      plotly::plot_ly(
+        type = "parcoords",
+        line = list(color = ~mod_num,
+                    colorscale = 'Jet',
+                    showscale = TRUE,
+                    reversescale = TRUE,
+                    cmin = 0,
+                    cmax = 80),
+        dimensions = list(
+          list(
+            range = c(50, 100),
+            label = "ntrees",
+            values = ~ntrees
+          ),
+          list(
+            range = c(4, 7),
+            label = "mtries",
+            values = ~mtries
+          ),
+          list(
+            range = c(4, 20),
+            label = "Nbins",
+            values = ~nbins
+          ),
+          list(
+            range = c(3, 20),
+            label = "max_depth",
+            values = ~max_depth
+          ),
+          list(
+            range = c(1e-04, 1e-03),
+            label = "min_split_improvement",
+            values = ~min_split_improvement
+          ),
+          list(
+            range = c(min(.$auc), max(.$auc)),
+            label = "AUC",
+            values = ~auc
+          ),
+          list(
+            range = c(min(.$specificity_max_f1), max(.$specificity_max_f1)),
+            label = "Spc max F1",
+            values = ~specificity_max_f1
+          ),
+          list(
+            range = c(min(.$sensitivity_98_specificity), max(.$sensitivity_98_specificity)),
+            label = "Sns 98 Spc",
+            values = ~sensitivity_98_specificity
+          )
+        )
+      )
+  })
+  output$gbgp <- plotly::renderPlotly({
+    readr::read_csv("data/industries/autotruckdealerships/gb_growth_tuning_results.csv") %>%
+      plotly::plot_ly(
+        type = "parcoords",
+        line = list(color = ~mod_num,
+                    colorscale = 'Jet',
+                    showscale = TRUE,
+                    reversescale = TRUE,
+                    cmin = 0,
+                    cmax = 72),
+        dimensions = list(
+          list(
+            range = c(100, 300),
+            label = "ntrees",
+            values = ~ntrees
+          ),
+          list(
+            range = c(.001, .05),
+            label = "Learn Rate",
+            values = ~learn_rate
+          ),
+          list(
+            range = c(0.5, 0.99),
+            label = "LR Annealing",
+            values = ~learn_rate_annealing
+          ),
+          list(
+            range = c(1, 10),
+            label = "max_depth",
+            values = ~max_depth
+          ),
+          list(
+            range = c(min(.$mae_test), max(.$mae_test)),
+            label = "MAE",
+            values = ~mae_test
+          ),
+          list(
+            range = c(min(.$mse_test), max(.$mse_test)),
+            label = "MSE",
+            values = ~mse_test
+          )
+        )
+      )
+  })
+  output$gbpp <- plotly::renderPlotly({
+    readr::read_csv("data/industries/autotruckdealerships/gb_prob_tuning_results.csv") %>%
+      plotly::plot_ly(
+        type = "parcoords",
+        line = list(color = ~mod_num,
+                    colorscale = 'Jet',
+                    showscale = TRUE,
+                    reversescale = TRUE,
+                    cmin = 0,
+                    cmax = 72),
+        dimensions = list(
+          list(
+            range = c(100, 300),
+            label = "ntrees",
+            values = ~ntrees
+          ),
+          list(
+            range = c(.001, .05),
+            label = "Learn Rate",
+            values = ~learn_rate
+          ),
+          list(
+            range = c(0.5, 0.99),
+            label = "LR Annealing",
+            values = ~learn_rate_annealing
+          ),
+          list(
+            range = c(1, 10),
+            label = "max_depth",
+            values = ~max_depth
+          ),
+          list(
+            range = c(min(.$auc), max(.$auc)),
+            label = "AUC",
+            values = ~auc
+          ),
+          list(
+            range = c(min(.$specificity_max_f1), max(.$specificity_max_f1)),
+            label = "Spc max F1",
+            values = ~specificity_max_f1
+          ),
+          list(
+            range = c(min(.$sensitivity_98_specificity), max(.$sensitivity_98_specificity)),
+            label = "Sns 98 Spc",
+            values = ~sensitivity_98_specificity
+          )
+        )
       )
   })
  
