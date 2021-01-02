@@ -42,6 +42,25 @@ analyze_industry <- function(industry) {
       amount_per_share = 0
     )
   }
+  historical_yield <- dividends %>%
+    dplyr::mutate(
+      quarter = as.numeric(lubridate::quarter(date, with_year = TRUE)),
+      three_year_dividend = purrr::map2_dbl(
+        .x = ticker,
+        .y = quarter,
+        .f = ~{
+          dividends %>%
+            dplyr::filter(
+              ticker == .x,
+              quarter < .y,
+              quarter >= .y - 3
+            ) %>%
+            dplyr::pull(amount_per_share) %>%
+            sum()
+        }
+      )
+    ) %>%
+    dplyr::select(-date, -amount_per_share)
   dividends <- dividends %>%
     dplyr::mutate(year = lubridate::year(lubridate::ymd(date))) %>%
     dplyr::group_by(ticker, year) %>%
@@ -74,11 +93,13 @@ analyze_industry <- function(industry) {
     dplyr::ungroup() %>%
     dplyr::left_join(ratios, by = c("ticker", "quarter")) %>%
     dplyr::left_join(dividends, by = c("ticker", "year")) %>%
+    dplyr::left_join(historical_yield, by = c("ticker", "quarter")) %>%
     dplyr::mutate(
       pays_dividend = ifelse(is.na(num_per_year), 0, 1),
       num_per_year = tidyr::replace_na(num_per_year, 0),
       yearly_amount_per_share = tidyr::replace_na(yearly_amount_per_share, 0),
-      dividend_yield = yearly_amount_per_share / avg_price
+      dividend_yield = yearly_amount_per_share / avg_price,
+      three_year_dividend = tidyr::replace_na(three_year_dividend, 0)
     ) %>%
     dplyr::filter(!is.na(pe_ratio))
   
@@ -148,26 +169,30 @@ random_forest_binary <- function(.data, industry) {
   path <- stringr::str_c("data/industries/", industry)
   
   response <- .data %>%
-    dplyr::select(ticker, quarter, avg_price) %>%
-    dplyr::mutate(quarter = quarter - 3, avg_future_price = avg_price) %>%
-    dplyr::select(-avg_price)
+    dplyr::select(ticker, quarter, avg_price, three_year_dividend) %>%
+    dplyr::mutate(
+      quarter = quarter - 3, 
+      avg_future_price_plus_div = avg_price + three_year_dividend
+    ) %>%
+    dplyr::select(-avg_price, -three_year_dividend)
   
   usethis::ui_info("Compiling model Data for {industry} DRF binary models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
-    dplyr::filter(!is.na(avg_future_price)) %>%
+    dplyr::filter(!is.na(avg_future_price_plus_div)) %>%
     dplyr::mutate(
-      three_year_growth = avg_future_price / avg_price - 1,
+      three_year_growth = avg_future_price_plus_div / avg_price - 1,
       over_40_growth = as.factor(dplyr::if_else(three_year_growth > 0.4, "yes", "no"))
     ) %>%
     dplyr::select(
       -ticker, 
       -three_year_growth, 
-      -avg_future_price, 
+      -avg_future_price_plus_div, 
       -quarter, 
       -year,
-      -yearly_amount_per_share
+      -yearly_amount_per_share,
+      -three_year_dividend
     ) %>%
     # center and scale some predictors
     dplyr::mutate(
@@ -220,7 +245,7 @@ random_forest_binary <- function(.data, industry) {
       tmp_mod <- h2o::h2o.randomForest(
         y = "over_40_growth",
         training_frame = train,
-        nfolds = 5,
+        nfolds = ifelse(nrow(mod_dat) * 0.25 < 6, 0, 5),
         model_id = "temp_forest_mod",
         ntrees = grid_sub$ntrees,
         max_depth = grid_sub$max_depth,
@@ -383,22 +408,26 @@ random_forest_growth <- function(.data, industry) {
   path <- stringr::str_c("data/industries/", industry)
   
   response <- .data %>%
-    dplyr::select(ticker, quarter, avg_price) %>%
-    dplyr::mutate(quarter = quarter - 3, avg_future_price = avg_price) %>%
-    dplyr::select(-avg_price)
+    dplyr::select(ticker, quarter, avg_price, three_year_dividend) %>%
+    dplyr::mutate(
+      quarter = quarter - 3, 
+      avg_future_price_plus_div = avg_price + three_year_dividend
+    ) %>%
+    dplyr::select(-avg_price, -three_year_dividend)
   
   usethis::ui_info("Compiling model Data for {industry} DRF growth models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
-    dplyr::filter(!is.na(avg_future_price)) %>%
-    dplyr::mutate(three_year_growth = avg_future_price / avg_price - 1) %>%
+    dplyr::filter(!is.na(avg_future_price_plus_div)) %>%
+    dplyr::mutate(three_year_growth = avg_future_price_plus_div / avg_price - 1) %>%
     dplyr::select(
       -ticker, 
-      -avg_future_price, 
+      -avg_future_price_plus_div, 
       -quarter, 
       -year,
-      -yearly_amount_per_share
+      -yearly_amount_per_share,
+      -three_year_dividend
     ) %>%
     # center and scale some predictors
     dplyr::mutate(
@@ -445,7 +474,7 @@ random_forest_growth <- function(.data, industry) {
       tmp_mod <- h2o::h2o.randomForest(
         y = "three_year_growth",
         training_frame = train,
-        nfolds = 5,
+        nfolds = ifelse(nrow(mod_dat) * 0.25 < 6, 0, 5),
         model_id = "temp_forest_mod",
         ntrees = grid_sub$ntrees,
         max_depth = grid_sub$max_depth,
@@ -552,26 +581,30 @@ gradient_boosted_binary <- function(.data, industry) {
   path <- stringr::str_c("data/industries/", industry)
   
   response <- .data %>%
-    dplyr::select(ticker, quarter, avg_price) %>%
-    dplyr::mutate(quarter = quarter - 3, avg_future_price = avg_price) %>%
-    dplyr::select(-avg_price)
+    dplyr::select(ticker, quarter, avg_price, three_year_dividend) %>%
+    dplyr::mutate(
+      quarter = quarter - 3, 
+      avg_future_price_plus_div = avg_price + three_year_dividend
+    ) %>%
+    dplyr::select(-avg_price, -three_year_dividend)
   
   usethis::ui_info("Compiling model Data for {industry} GB prob models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
-    dplyr::filter(!is.na(avg_future_price)) %>%
+    dplyr::filter(!is.na(avg_future_price_plus_div)) %>%
     dplyr::mutate(
-      three_year_growth = avg_future_price / avg_price - 1,
+      three_year_growth = avg_future_price_plus_div / avg_price - 1,
       over_40_growth = as.factor(dplyr::if_else(three_year_growth > 0.4, "yes", "no"))
     ) %>%
     dplyr::select(
       -ticker, 
       -three_year_growth, 
-      -avg_future_price, 
+      -avg_future_price_plus_div, 
       -quarter, 
       -year,
-      -yearly_amount_per_share
+      -yearly_amount_per_share,
+      -three_year_dividend
     ) %>%
     # center and scale some predictors
     dplyr::mutate(
@@ -625,7 +658,7 @@ gradient_boosted_binary <- function(.data, industry) {
       tmp_mod <- h2o::h2o.gbm(
         y = "over_40_growth",
         training_frame = train,
-        nfolds = 5,
+        nfolds = ifelse(nrow(mod_dat) * 0.25 < 6, 0, 5),
         model_id = "temp_gb_mod",
         ntrees = grid_sub$ntrees,
         max_depth = grid_sub$max_depth,
@@ -788,22 +821,26 @@ gradient_boosted_growth <- function(.data, industry) {
   path <- stringr::str_c("data/industries/", industry)
   
   response <- .data %>%
-    dplyr::select(ticker, quarter, avg_price) %>%
-    dplyr::mutate(quarter = quarter - 3, avg_future_price = avg_price) %>%
-    dplyr::select(-avg_price)
+    dplyr::select(ticker, quarter, avg_price, three_year_dividend) %>%
+    dplyr::mutate(
+      quarter = quarter - 3, 
+      avg_future_price_plus_div = avg_price + three_year_dividend
+    ) %>%
+    dplyr::select(-avg_price, -three_year_dividend)
   
   usethis::ui_info("Compiling model data for {industry} GB growth models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
-    dplyr::filter(!is.na(avg_future_price)) %>%
-    dplyr::mutate(three_year_growth = avg_future_price / avg_price - 1) %>%
+    dplyr::filter(!is.na(avg_future_price_plus_div)) %>%
+    dplyr::mutate(three_year_growth = avg_future_price_plus_div / avg_price - 1) %>%
     dplyr::select(
       -ticker, 
-      -avg_future_price, 
+      -avg_future_price_plus_div, 
       -quarter, 
       -year,
-      -yearly_amount_per_share
+      -yearly_amount_per_share,
+      -three_year_dividend
     ) %>%
     # center and scale some predictors
     dplyr::mutate(
@@ -853,7 +890,7 @@ gradient_boosted_growth <- function(.data, industry) {
       tmp_mod <- h2o::h2o.gbm(
         y = "three_year_growth",
         training_frame = train,
-        nfolds = 5,
+        nfolds = ifelse(nrow(mod_dat) * 0.25 < 6, 0, 5),
         model_id = "temp_gb_mod",
         ntrees = grid_sub$ntrees,
         max_depth = grid_sub$max_depth,
