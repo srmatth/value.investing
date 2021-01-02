@@ -41,7 +41,9 @@ mod_training_server <- function(input, output, session, rv){
   ns <- session$ns
   
   output$rfg <- DT::renderDataTable({
-    readr::read_csv("data/industries/autotruckdealerships/rf_growth_tuning_results.csv") %>%
+    readr::read_csv(
+      stringr::str_c("data/industries/", rv$ind(), "/rf_growth_tuning_results.csv")
+    ) %>%
       dplyr::select(
         mod_num,
         r_2_test,
@@ -79,7 +81,9 @@ mod_training_server <- function(input, output, session, rv){
       )
   })
   output$rfp <- DT::renderDataTable({
-    readr::read_csv("data/industries/autotruckdealerships/rf_binary_tuning_results.csv") %>%
+    readr::read_csv(
+      stringr::str_c("data/industries/", rv$ind(), "/rf_prob_tuning_results.csv")
+    ) %>%
       dplyr::select(
         mod_num,
         auc,
@@ -124,7 +128,9 @@ mod_training_server <- function(input, output, session, rv){
       )
   })
   output$gbg <- DT::renderDataTable({
-    readr::read_csv("data/industries/autotruckdealerships/gb_growth_tuning_results.csv") %>%
+    readr::read_csv(
+      stringr::str_c("data/industries/", rv$ind(), "/gb_growth_tuning_results.csv")
+    ) %>%
       dplyr::select(
         mod_num,
         r_2_test,
@@ -160,7 +166,9 @@ mod_training_server <- function(input, output, session, rv){
         )
   })
   output$gbp <- DT::renderDataTable({
-    readr::read_csv("data/industries/autotruckdealerships/gb_prob_tuning_results.csv") %>%
+    readr::read_csv(
+      stringr::str_c("data/industries/", rv$ind(), "/gb_prob_tuning_results.csv")
+    ) %>%
       dplyr::select(
         mod_num,
         auc,
@@ -205,7 +213,9 @@ mod_training_server <- function(input, output, session, rv){
   })
   
   output$rfgp <- plotly::renderPlotly({
-    readr::read_csv("data/industries/autotruckdealerships/rf_growth_tuning_results.csv") %>%
+    readr::read_csv(
+      stringr::str_c("data/industries/", rv$ind(), "/rf_growth_tuning_results.csv")
+    ) %>%
       plotly::plot_ly(
         type = "parcoords",
         line = list(color = ~mod_num,
@@ -254,7 +264,9 @@ mod_training_server <- function(input, output, session, rv){
       )
   })
   output$rfpp <- plotly::renderPlotly({
-    readr::read_csv("data/industries/autotruckdealerships/rf_binary_tuning_results.csv") %>%
+    readr::read_csv(
+      stringr::str_c("data/industries/", rv$ind(), "/rf_binary_tuning_results.csv")
+    ) %>%
       plotly::plot_ly(
         type = "parcoords",
         line = list(color = ~mod_num,
@@ -308,7 +320,9 @@ mod_training_server <- function(input, output, session, rv){
       )
   })
   output$gbgp <- plotly::renderPlotly({
-    readr::read_csv("data/industries/autotruckdealerships/gb_growth_tuning_results.csv") %>%
+    readr::read_csv(
+      stringr::str_c("data/industries/", rv$ind(), "/gb_growth_tuning_results.csv")
+    ) %>%
       plotly::plot_ly(
         type = "parcoords",
         line = list(color = ~mod_num,
@@ -352,7 +366,9 @@ mod_training_server <- function(input, output, session, rv){
       )
   })
   output$gbpp <- plotly::renderPlotly({
-    readr::read_csv("data/industries/autotruckdealerships/gb_prob_tuning_results.csv") %>%
+    readr::read_csv(
+      stringr::str_c("data/industries/", rv$ind(), "/gb_prob_tuning_results.csv")
+    ) %>%
       plotly::plot_ly(
         type = "parcoords",
         line = list(color = ~mod_num,

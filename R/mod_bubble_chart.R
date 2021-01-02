@@ -23,10 +23,14 @@ mod_bubble_chart_server <- function(input, output, session, rv){
   ns <- session$ns
  
   output$plt <- plotly::renderPlotly({
-    growth <- readr::read_csv("data/industries/autotruckdealerships/gb_growth_preds.csv") %>%
+    growth <- readr::read_csv(
+      stringr::str_c("data/industries/", rv$ind(), "/gb_growth_preds.csv")
+    ) %>%
       dplyr::select(growth_pred = predict, ticker, quarter) %>%
       dplyr::left_join(
-        y = readr::read_csv("data/industries/autotruckdealerships/gb_prob_preds.csv") %>%
+        y = readr::read_csv(
+          stringr::str_c("data/industries/", rv$ind(), "/gb_prob_preds.csv")
+        ) %>%
           dplyr::select(prob = yes, ticker, quarter),
         by = c("ticker", "quarter")
       ) %>%

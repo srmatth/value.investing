@@ -23,7 +23,7 @@ mod_ind_prices_server <- function(input, output, session, rv){
   ns <- session$ns
   
   output$prices <- plotly::renderPlotly({
-    x <- get_price_files_new("data/industries/autotruckdealerships") %>%
+    x <- get_price_files_new(stringr::str_c("data/industries/", rv$ind())) %>%
       dplyr::group_by(date) %>%
       dplyr::summarize(close = sum(close, na.rm = TRUE)) %>%
       dplyr::ungroup() %>%

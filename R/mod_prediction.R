@@ -23,10 +23,14 @@ mod_prediction_server <- function(input, output, session, rv){
   ns <- session$ns
   
   output$tbl <- DT::renderDataTable({
-    growth <- readr::read_csv("data/industries/autotruckdealerships/gb_growth_preds.csv") %>%
+    growth <- readr::read_csv(
+      stringr::str_c("data/industries/", rv$ind(), "/gb_growth_preds.csv")
+    ) %>%
       dplyr::select(ticker, quarter, growth_pred_gb = predict, avg_price) %>%
       dplyr::full_join(
-        y = readr::read_csv("data/industries/autotruckdealerships/gb_prob_preds.csv") %>%
+        y = readr::read_csv(
+          stringr::str_c("data/industries/", rv$ind(), "/gb_prob_preds.csv")
+        ) %>%
           dplyr::mutate(metric = ifelse(metric == "f1", "f1", "98")) %>%
           dplyr::select(prob_gb = yes, ticker, quarter, predict_gb = predict, metric) %>%
           tidyr::pivot_wider(
@@ -37,12 +41,16 @@ mod_prediction_server <- function(input, output, session, rv){
         by = c("ticker", "quarter")
       ) %>%
       dplyr::full_join(
-        y = readr::read_csv("data/industries/autotruckdealerships/rf_growth_preds.csv") %>%
+        y = readr::read_csv(
+          stringr::str_c("data/industries/", rv$ind(), "/rf_growth_preds.csv")
+        ) %>%
           dplyr::select(ticker, quarter, growth_pred_rf = predict),
         by = c("ticker", "quarter")
       ) %>%
       dplyr::full_join(
-        y = readr::read_csv("data/industries/autotruckdealerships/rf_binary_preds.csv") %>%
+        y = readr::read_csv(
+          stringr::str_c("data/industries/", rv$ind(), "/rf_prob_preds.csv")
+        ) %>%
           dplyr::mutate(metric = ifelse(metric == "f1", "f1", "98")) %>%
           dplyr::select(prob_rf = yes, ticker, quarter, predict_rf = predict, metric) %>%
           tidyr::pivot_wider(
@@ -53,7 +61,7 @@ mod_prediction_server <- function(input, output, session, rv){
         by = c("ticker", "quarter")
       ) %>%
       dplyr::left_join(
-        y = get_filtered_stocks(ind = paste0("ind_", "autotruckdealerships"), all_data = FALSE) %>%
+        y = get_filtered_stocks(ind = paste0("ind_", rv$ind()), all_data = FALSE) %>%
           dplyr::select(ticker, price),
         by = "ticker"
       ) %>%
