@@ -1,0 +1,181 @@
+---
+title: "LUV analysis"
+author: "Spencer Matthews"
+date: "2/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+library(reticulate)
+library(h2o)
+library(dplyr)
+devtools::load_all()
+library(ggbeeswarm)
+library(ggplot2)
+library(SHAPforxgboost)
+
+use_python("/Users/spencer.matthews/Library/r-miniconda/envs/r-reticulate/bin/python")
+
+stock <- "LUV"
+industry <- "airlines"
+```
+
+# Get Data
+
+```{r}
+prices <- get_historical_prices(stock)
+ratios <- get_historical_ratios(stock) %>%
+  dplyr::mutate(
+    quarter = lubridate::quarter(date, with_year = TRUE)
+  ) %>% 
+  dplyr::select(
+    ticker,
+    quarter,
+    pe_ratio,
+    price_to_sales_ratio,
+    price_to_book_ratio,
+    price_to_fcf_ratio,
+    debt_to_equity_ratio
+  )
+dividends <- get_historical_dividends(stock) 
+if (nrow(dividends) == 0) {
+  dividends <- data.frame(
+    ticker = "I'm not a ticker",
+    date = "1665-01-01",
+    amount_per_share = 0
+  )
+}
+dividends <- dividends %>%
+  dplyr::mutate(year = lubridate::year(lubridate::ymd(date))) %>%
+  dplyr::group_by(ticker, year) %>%
+  dplyr::summarize(
+    yearly_amount_per_share = sum(amount_per_share),
+    num_per_year = dplyr::n()
+  )
+new_dat <- get_latest_quarter(stock)
+mod_dat <- get_mod_dat(industry)
+new_dat_1 <- new_dat %>%
+  mutate(was_profitable = ifelse(pe_ratio > 0, 1, 0)) %>%
+  select(
+    colnames(mod_dat %>% select(-three_year_growth))
+  ) %>%
+  tidyr::replace_na(list(debt_to_equity_ratio = 0, price_to_fcf_ratio = 0))
+hist(log(1.05 + mod_dat$three_year_growth))
+```
+
+```{python}
+import shap
+import pandas as pd
+import numpy as np
+import sklearn as sk
+import matplotlib.pyplot as plt
+
+params = {"n_estimators":1000, "max_depth":15, "min_samples_leaf":5, "max_features":7, "verbose":1}
+
+rf = sk.ensemble.RandomForestRegressor(n_estimators = 1000, max_depth = 15, min_samples_leaf = 5, max_features = 7, verbose = 1)
+
+X = r.mod_dat.iloc[:, 0:-1]
+y = r.mod_dat[["three_year_growth"]].values.ravel()
+
+rf.fit(X, y)
+
+rf.predict(r.new_dat_1)
+```
+
+
+```{python}
+rf_ex = shap.TreeExplainer(rf)
+expected_value = rf_ex.expected_value
+train_shap = rf_ex.shap_values(X)
+new_shap = rf_ex.shap_values(r.new_dat_1)
+new_shap
+```
+
+```{python}
+plt.clf()
+shap.initjs()
+p = shap.summary_plot(train_shap, X)
+display(p)
+```
+
+```{python}
+shap.dependence_plot("avg_range", train_shap, X)
+
+```
+
+
+
+```{r}
+py$new_shap %>%
+  as.data.frame() %>%
+  magrittr::set_colnames(colnames(new_dat_1))
+```
+```{r}
+train_shap <- py$train_shap %>%
+  as.data.frame() %>%
+  magrittr::set_colnames(colnames(new_dat_1))
+
+train_shap %>%
+  tidyr::pivot_longer(
+    names_to = "variable",
+    values_to = "shap_val",
+    cols = colnames(.)
+  ) %>%
+  ggplot() +
+  geom_quasirandom(
+    aes(y = variable, x = shap_val, color = shap_val),
+    groupOnX = FALSE
+  ) + 
+  theme_classic() +
+  xlab("SHAP Value") +
+  ylab("Variable")
+
+shap_long <- train_shap %>%
+  mutate(ID = 1:n()) %>%
+  tidyr::pivot_longer(
+    names_to = "variable",
+    values_to = "value",
+    cols = colnames(.)[colnames(.) != "ID"]
+  ) %>%
+  mutate(mean_value = py$expected_value)
+
+dat_long <- mod_dat %>%
+  select(-three_year_growth) %>%
+  mutate(
+    across(.fns = as.numeric),
+    ID = 1:n()
+  ) %>%
+  tidyr::pivot_longer(
+    names_to = "variable",
+    values_to = "rfvalue",
+    cols = colnames(.)[colnames(.) != "ID"]
+  )
+
+standard_long <- mod_dat %>%
+  select(-three_year_growth) %>%
+  mutate(
+    across(.fns = as.numeric),
+    across(.fns = ~{(.x - min(.x)) / (max(.x) - min(.x))}),
+    ID = 1:n()
+  ) %>%
+  tidyr::pivot_longer(
+    names_to = "variable",
+    values_to = "stdfvalue",
+    cols = colnames(.)[colnames(.) != "ID"]
+  )
+shap_long_all <- shap_long %>%
+  left_join(dat_long, by = c("ID", "variable")) %>%
+  left_join(standard_long, by = c("ID", "variable")) %>%
+  select(ID, variable, value, rfvalue, stdfvalue, mean_value)
+
+shap.plot.summary(shap_long_all)
+
+dat <- newdata %>% as.data.frame()
+
+ggplot() +
+  geom_point(aes(x = dat$avg_range, y = explain_growth$avg_range, color = as.factor(dat$pays_dividend)))
+```
+
+
