@@ -1,13 +1,13 @@
-Package: stockAnalyzer
-Title: An Amazing Shiny App
+Package: value.investing
+Title: A shiny app for Value Investors
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "firstname",
-           family = "lastname",
+    person(given = "Spencer",
+           family = "Matthews",
            role = c("aut", "cre"),
-           email = "your@email.com")
-Description: What the package does (one paragraph).
-License: What license is it under?
+           email = "srmatthews98@gmail.com")
+Description: A shiny app to find value stocks and help in investing in them.
+License: MIT + file LICENSE
 Imports: 
     config,
     golem,

@@ -3,6 +3,7 @@
 export("%>%")
 export(get_filtered_stocks)
 export(get_historical_dividends)
+export(get_historical_prices)
 export(get_historical_ratios)
 export(run_app)
 export(string_to_numeric)

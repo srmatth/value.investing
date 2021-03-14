@@ -16,16 +16,6 @@ app_ui <- function(request) {
       ),
       column(
         width = 9,
-        mod_top_vals_ui("top_vals_ui_1")
-      )
-    ),
-    fluidRow(
-      column(
-        width = 5,
-        mod_top_tickers_ui("top_tickers_ui_1")
-      ),
-      column(
-        width = 7,
         mod_bubble_chart_ui("bubble_chart_ui_1")
       )
     ),
