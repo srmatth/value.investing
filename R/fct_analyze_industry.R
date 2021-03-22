@@ -370,7 +370,8 @@ random_forest_binary <- function(.data, industry) {
     dplyr::pull(threshold_98_specificity)
   
   newdata <- .data %>% 
-    dplyr::filter(year == 2020) %>%
+    group_by(ticker) %>%
+    filter(quarter == max(quarter)) %>%
     h2o::as.h2o()
   
   preds_f1 <- predict(final_mod_f1, newdata) %>%
@@ -554,7 +555,8 @@ random_forest_growth <- function(.data, industry) {
   )
   
   newdata <- .data %>% 
-    dplyr::filter(year == 2020) %>%
+    group_by(ticker) %>%
+    filter(quarter == max(quarter)) %>%
     h2o::as.h2o()
   
   explain_growth <- h2o::h2o.predict_contributions(final_mod, newdata) %>%
@@ -784,7 +786,8 @@ gradient_boosted_binary <- function(.data, industry) {
     dplyr::pull(threshold_98_specificity)
   
   newdata <- .data %>% 
-    dplyr::filter(year == 2020) %>%
+    group_by(ticker) %>%
+    filter(quarter == max(quarter)) %>%
     h2o::as.h2o()
   
   preds_f1 <- predict(final_mod_f1, newdata) %>%
@@ -976,7 +979,8 @@ gradient_boosted_growth <- function(.data, industry) {
   )
   
   newdata <- .data %>% 
-    dplyr::filter(year == 2020) %>%
+    group_by(ticker) %>%
+    filter(quarter == max(quarter)) %>%
     h2o::as.h2o()
   
   explain_growth <- h2o::h2o.predict_contributions(final_mod, newdata) %>%
