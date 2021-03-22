@@ -1,0 +1,79 @@
+---
+title: "Industry"
+subtitle: "Apparel Manufacturers"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: readable
+    highlight: pygments
+    keep_md: false
+    css: "custom.css"
+---
+
+
+---
+
+```{r setup, include=FALSE}
+## Put any setup code you want hidden in the output here
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  message = FALSE, 
+  warning = FALSE
+)
+library(shiny)
+library(dplyr)
+library(ggplot2)
+devtools::load_all()
+# mod_dat <- growth_model_data(industry)
+
+setwd("../..")
+
+mod_dat <- readr::read_csv("data/growth_models/Apparel Manufacturing/mod_data.csv")
+```
+
+<div class="column-left-even">
+
+```{r}
+mod_dat %>%
+  mutate(actual_growth = exp(response) - 1) %>%
+  ggplot() +
+  aes(x = actual_growth) +
+  geom_density(lwd = 1, fill = "black") +
+  xlab("Percent Growth") +
+  ylab("Density") +
+  ggtitle("Untransformed Response") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+
+</div>
+
+<div class="column-right-even">
+
+```{r}
+mod_dat %>%
+  ggplot() +
+  aes(x = response) +
+  geom_density(lwd = 1, fill = "black") +
+  xlab("Percent Growth") +
+  ylab("Density") +
+  ggtitle("Transformed Response") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+</div>
+
+<div class="column-center">
+
+```{r}
+summary(mod_dat)
+```
+
+
+</div>
