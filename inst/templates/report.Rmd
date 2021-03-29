@@ -1,0 +1,26 @@
+---
+output:
+  html_document:
+    theme: readable
+    highlight: pygments
+    df_print: paged
+    keep_md: false
+    css: "report.css"
+params:
+  industry: "Grocery Stores"
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+path <- str_c("../../data/growth_models/", params$industry, "/")
+combined_dat <- read_csv(str_c(path, "combined_data.csv"))
+mod_dat <- read_csv(str_c(path, "mod_data.csv"))
+rf_metrics <- read_csv(str_c(path, "rf_metrics.csv"))
+gb_metrics <- read_csv(str_c(path, "gb_metrics.csv"))
+```
+
