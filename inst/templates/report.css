@@ -89,3 +89,8 @@ hr {
     font-family: Museo sans-serif, Calibri;
     padding-left: 15px;
 }
+.header {
+  font-family:Times New Roman; 
+  color:#A54657; 
+  font-size:16pt;
+}

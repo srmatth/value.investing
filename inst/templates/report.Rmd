@@ -16,6 +16,11 @@ library(readr)
 library(dplyr)
 library(ggplot2)
 library(stringr)
+library(corrplot)
+library(extrafont)
+library(shiny)
+
+suppressMessages(loadfonts())
 
 path <- str_c("../../data/growth_models/", params$industry, "/")
 combined_dat <- read_csv(str_c(path, "combined_data.csv"))
@@ -23,4 +28,319 @@ mod_dat <- read_csv(str_c(path, "mod_data.csv"))
 rf_metrics <- read_csv(str_c(path, "rf_metrics.csv"))
 gb_metrics <- read_csv(str_c(path, "gb_metrics.csv"))
 ```
+
+<div class="column-center">
+```{r}
+p(
+  str_c(params$industry, " Industry Report"),
+  style = "font-family:Times New Roman; color:#0D3B66; font-size:34pt;"
+)
+p(
+  format(Sys.Date(), "%B %Y"),
+  style = "font-family:Times New Roman; color:#849698; font-size:24pt;"
+)
+hr()
+br()
+p(
+  em("Exploratory Data Analysis"),
+  style = "font-family:Times New Roman; color:#849698; font-size:20pt;"
+)
+```
+
+</div>
+
+<div class="column-left-even">
+
+```{r}
+p(
+  "Distribution of the Response",
+  class = "header"
+)
+```
+
+```{r, fig.height=5, fig.width =12}
+mod_dat %>%
+  mutate(response = exp(response) - 1.1) %>%
+  ggplot() +
+  aes(x = response) +
+  geom_density(
+    color = NA,
+    fill = "#0D3B66",
+    alpha = 0.8
+  ) +
+  xlab("Growth (%)") +
+  ggtitle("Untransformed") +
+  theme_classic() +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    axis.title.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    axis.line.y = element_blank(),
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 30
+    ),
+    axis.title.x = element_text(size = 24),
+    axis.text.x = element_text(size = 21),
+    aspect.ratio = 0.30
+  ) +
+  coord_cartesian(expand = FALSE, clip = "off")
+```
+
+
+```{r, fig.height=5, fig.width = 12}
+mod_dat %>%
+  ggplot() +
+  aes(x = response) +
+  geom_density(
+    color = NA,
+    fill = "#0D3B66",
+    alpha = 0.8
+  ) +
+  xlab("Log(Growth + 1.1)") +
+  ggtitle("Transformed") +
+  theme_classic() +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    axis.title.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    axis.line.y = element_blank(),
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 30
+    ),
+    axis.text.x = element_text(size = 21),
+    axis.title.x = element_text(size = 24),
+    aspect.ratio = 0.30
+  ) +
+  coord_cartesian(expand = FALSE, clip = "off")
+```
+
+</div>
+
+<div class="column-right-even">
+```{r}
+p(
+  "Correlation between Covariates and Response",
+  class = "header"
+)
+```
+
+```{r}
+corrplot(
+  cor(mod_dat),
+  method = "shade",
+  type = "upper",
+  diag = FALSE,
+  tl.cex = 1,
+  tl.col = "#000000",
+  tl.srt = 45,
+  cl.pos = "n",
+  col = colorRampPalette(colors = c("#EE964B", "#FAF0CA", "#0D3B66"))(200)
+)
+```
+</div>
+
+<div class="column-center">
+```{r}
+hr()
+br()
+p(
+  em("Model Tuning"),
+  style = "font-family:Times New Roman; color:#849698; font-size:20pt;"
+)
+```
+
+</div>
+
+<div class="column-left-even">
+
+```{r}
+p(
+  "Random Forest Models",
+  class = "header"
+)
+```
+
+```{r}
+rf_metrics %>%
+  filter(.metric == "mae") %>%
+  ggplot() +
+  aes(x = mtry, y = mean, color = as.factor(min_n)) +
+  geom_point(size = 2) +
+  geom_line(size = 1.5, alpha = 0.8) +
+  scale_color_manual(values = c("#EE964B", "#849698", "#A54657", "#0D3B66")) +
+  ylab("CV Average") +
+  ggtitle("MAE") +
+  theme_classic() +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    axis.ticks = element_blank(),
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 18
+    ),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.position = c(0.75, 0.85),
+    legend.background = element_rect(color = "#0D3B66", fill = "#ffffff")
+  ) +
+  guides(color = guide_legend(nrow = 1, title.position = "top", title.hjust = 0.5)) +
+  labs(color = "min_n") +
+  coord_cartesian(clip = "off") 
+```
+
+
+```{r}
+rf_metrics %>%
+  filter(.metric == "rmse") %>%
+  ggplot() +
+  aes(x = mtry, y = mean, color = as.factor(min_n)) +
+  geom_point(size = 2) +
+  geom_line(size = 1.5, alpha = 0.8) +
+  scale_color_manual(values = c("#EE964B", "#849698", "#A54657", "#0D3B66")) +
+  ylab("CV Average") +
+  ggtitle("RMSE") +
+  theme_classic() +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    axis.ticks = element_blank(),
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 18
+    ),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 12),
+    legend.position = c(0.75, 0.85),
+    legend.background = element_rect(color = "#0D3B66", fill = "#ffffff")
+  ) +
+  guides(color = guide_legend(nrow = 1, title.position = "top", title.hjust = 0.5)) +
+  labs(color = "min_n") +
+  coord_cartesian(clip = "off") 
+```
+
+
+
+</div>
+
+<div class="column-right-even">
+
+```{r}
+p(
+  "Gradient Boosted Models",
+  class = "header"
+)
+```
+
+```{r}
+gb_metrics %>%
+  filter(.metric == "mae") %>%
+  mutate(learn_rate = str_c("learn_rate: ", learn_rate)) %>%
+  ggplot() +
+  aes(x = mtry, y = mean, color = as.factor(tree_depth)) +
+  geom_point(size = 2) +
+  geom_line(size = 1.5, alpha = 0.8) +
+  facet_wrap(~as.factor(learn_rate), nrow = 1) +
+  scale_color_manual(values = c("#EE964B", "#849698", "#A54657", "#0D3B66")) +
+  ylab("CV Average") +
+  ggtitle("MAE") +
+  theme_bw() +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    axis.ticks = element_blank(),
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 18
+    ),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 12),
+    legend.position = c(0.75, 0.85),
+    legend.background = element_rect(color = "#0D3B66", fill = "#ffffff")
+  ) +
+  guides(color = guide_legend(nrow = 1, title.position = "top", title.hjust = 0.5)) +
+  labs(color = "tree_depth") +
+  coord_cartesian(clip = "off") 
+```
+
+
+```{r}
+gb_metrics %>%
+  filter(.metric == "rmse") %>%
+  mutate(learn_rate = str_c("learn_rate: ", learn_rate)) %>%
+  ggplot() +
+  aes(x = mtry, y = mean, color = as.factor(tree_depth)) +
+  geom_point(size = 2) +
+  geom_line(size = 1.5, alpha = 0.8) +
+  facet_wrap(~as.factor(learn_rate), nrow = 1) +
+  scale_color_manual(values = c("#EE964B", "#849698", "#A54657", "#0D3B66")) +
+  ylab("CV Average") +
+  ggtitle("RMSE") +
+  theme_bw() +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    axis.ticks = element_blank(),
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 18
+    ),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 12),
+    legend.position = c(0.75, 0.85),
+    legend.background = element_rect(color = "#0D3B66", fill = "#ffffff")
+  ) +
+  guides(color = guide_legend(nrow = 1, title.position = "top", title.hjust = 0.5)) +
+  labs(color = "tree_depth") +
+  coord_cartesian(clip = "off") 
+```
+
+
+</div>
+
+
+
+
+<div class="column-center">
+```{r}
+hr()
+br()
+p(
+  em("Final Models"),
+  style = "font-family:Times New Roman; color:#849698; font-size:20pt;"
+)
+```
+
+</div>
+
+
+
+
+
+
+
+<div class="column-center">
+```{r}
+hr()
+br()
+p(
+  em("Future Predictions"),
+  style = "font-family:Times New Roman; color:#849698; font-size:20pt;"
+)
+```
+
+</div>
+
+
+
+
+
+<div class="column-center">
+```{r}
+hr()
+br()
+```
+
+</div>
+
 
