@@ -19,6 +19,11 @@ library(stringr)
 library(corrplot)
 library(extrafont)
 library(shiny)
+library(reticulate)
+library(ggbeeswarm)
+library(tidyr)
+library(knitr)
+library(kableExtra)
 
 suppressMessages(loadfonts())
 
@@ -311,9 +316,411 @@ p(
 )
 ```
 
+```{r}
+p(
+  "Random Forest Model",
+  class = "header"
+)
+```
+
 </div>
 
+<div class="column-left-even">
 
+
+```{r}
+best_rf <- rf_metrics %>%
+  filter(.metric == "mae") %>%
+  arrange(mean) %>%
+  slice(1)
+best_gb <- gb_metrics %>%
+  filter(.metric == "mae") %>%
+  arrange(mean) %>%
+  slice(1)
+mod_dat_py <- mod_dat %>%
+  select(-response)
+response <- mod_dat$response
+```
+
+```{python, results="hide"}
+import sklearn.ensemble as sk
+import shap
+import numpy as np
+import pandas as pd
+
+mod_data = r.mod_dat_py
+response = r.response
+min_samp = np.int(r.best_rf.min_n)
+mtry = np.int(r.best_rf.mtry)
+
+
+rfmod = sk.RandomForestRegressor(n_estimators = 200, criterion = "mae", min_samples_leaf = min_samp, max_features = mtry)
+
+rfmod.fit(X = mod_data, y = response)
+
+preds = rfmod.predict(mod_data)
+
+shap_ex = shap.Explainer(rfmod)
+shap_vals = shap_ex(mod_data)
+shap_expected = shap_ex.expected_value
+```
+
+
+```{r}
+train_preds <- py$preds
+train_shap <- py$shap_vals$values %>%
+  as_tibble() %>%
+  magrittr::set_colnames(colnames(mod_dat %>% select(-response)))
+expected_value <- py$shap_expected
+```
+
+```{r}
+variable_values <- mod_dat %>%
+  select(-response) %>%
+  mutate(
+    across(everything(), .fns = ~((.x - min(.x)) / (max(.x) - min(.x))))
+  ) %>%
+  pivot_longer(
+    names_to = "variable",
+    values_to = "var_val",
+    cols = colnames(.)
+  )
+
+important_vars <- train_shap %>%
+  pivot_longer(
+    names_to = "variable",
+    values_to = "value",
+    cols = colnames(.)
+  ) %>%
+  mutate(value = abs(value)) %>%
+  group_by(variable) %>%
+  summarize(avg_value = mean(value)) %>%
+  ungroup() %>%
+  arrange(avg_value) %>%
+  pull(variable)
+
+train_shap %>%
+  pivot_longer(
+    names_to = "variable",
+    values_to = "value",
+    cols = colnames(.)
+  ) %>%
+  bind_cols(var_val = variable_values$var_val) %>%
+  mutate(variable = factor(variable, levels = important_vars)) %>%
+  ggplot() +
+  geom_quasirandom(
+    aes(y = variable, x = value, color = var_val),
+    groupOnX = FALSE,
+    size = 2
+  ) + 
+  theme_classic() +
+  xlab("SHAP Value") +
+  ylab("Variable") +
+  scale_color_gradient2(
+    high = "#0D3B66",
+    mid = "#FAF0CA",
+    low = "#A54657",
+    midpoint = 0.5,
+    breaks = c(0.1, 0.9),
+    labels = c("Low", "High")
+  ) +
+  ggtitle("SHAP Value Summary") +
+  labs(color = "Value of Variable") +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    legend.position = c(0.8, 0.2),
+    aspect.ratio = 0.75,
+    plot.title = element_text(hjust = 0.5, size = 18),
+    legend.background = element_rect(color = "#0D3B66", fill = "#ffffff")
+  ) +
+  guides(
+    color = guide_colorbar(
+      label = TRUE,
+      title.position = "top",
+      title.hjust = 0.5,
+      ticks = FALSE,
+      direction = "horizontal",
+      barwidth = unit(1.5, "in"),
+      barheight = unit(0.1, "in")
+    )
+  )
+```
+
+</div>
+
+<div class="column-right-even">
+
+<div style="background:#FAF0CA; border:black solid 3px; margin-left:20px; margin-right:20px;">
+
+```{r}
+resid <- train_preds %>%
+  as_tibble() %>%
+  rename(predict = value) %>%
+  bind_cols(actual = mod_dat$response) %>%
+  mutate(across(everything(), ~(exp(.x) - 1.1))) %>%
+  mutate(differences = actual - predict) %>%
+  pull(differences)
+p(
+  tags$u(tags$b("Model Info and Metrics")),
+  style = "font-family:Times New Roman; font-size:14pt"
+)
+tags$ul(
+  tags$li(str_c("min_n: ", best_rf$min_n, ", mtry: ", best_rf$mtry)),
+  tags$li(str_c("Mean Absolute Error: ", round(mean(abs(resid)), 4))),
+  tags$li(str_c("Root Mean Squared Error: ", round(sqrt(mean(resid^2)), 4))),
+  style = "text-align:left;font-family:Times New Roman;margin-left:20px"
+)
+```
+</div>
+
+```{r, fig.width = 10, fig.height = 4}
+br()
+ggplot() +
+  aes(x = resid) +
+  geom_density(
+    color = NA,
+    fill = "#A54657",
+    alpha = 0.8
+  ) +
+  xlab("Residuals") +
+  ggtitle("Density of the Residuals") +
+  theme_classic() +
+  theme(
+    aspect.ratio = 0.3,
+    text = element_text(family = "Times New Roman"),
+    axis.title.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    axis.line.y = element_blank(),
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 24
+    ),
+    axis.text.x = element_text(size = 16),
+    axis.title.x = element_text(size = 18)
+  ) +
+  coord_cartesian(clip = "off", expand = FALSE)
+```
+
+</div>
+
+<div class="column-center">
+
+```{r, fig.width=10, fig.height=4}
+train_shap %>%
+  pivot_longer(
+    names_to = "variable",
+    values_to = "value",
+    cols = colnames(.)
+  ) %>%
+  bind_cols(var_val = variable_values$var_val) %>%
+  mutate(variable = factor(variable, levels = important_vars)) %>%
+  ggplot() +
+  aes(x = var_val, y = value) +
+  geom_point(
+    color = "#849698",
+    alpha = 0.8,
+    size = 0.5
+  ) +
+  facet_wrap(~variable, ncol = 5) +
+  theme_bw() +
+  xlab("Scaled Variable Value") +
+  ylab("SHAP Value") +
+  ggtitle("SHAP Values vs. Variable Values") +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    aspect.ratio = 0.75,
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+```{r}
+p(
+  "Gradient Boosted Model",
+  class = "header"
+)
+```
+
+```{python, results="hide"}
+tree_depth = np.int(r.best_gb.tree_depth)
+mtry = np.int(r.best_gb.mtry)
+learn_rate = np.float(r.best_gb.learn_rate)
+
+
+gbmod = sk.GradientBoostingRegressor(learning_rate = learn_rate, max_features = mtry, max_depth = tree_depth)
+
+gbmod.fit(X = mod_data, y = response)
+
+preds_gb = gbmod.predict(mod_data)
+
+shap_ex_gb = shap.Explainer(gbmod)
+shap_vals_gb = shap_ex_gb(mod_data)
+shap_expected_gb = shap_ex_gb.expected_value
+```
+
+
+```{r}
+train_preds_gb <- py$preds_gb
+train_shap_gb <- py$shap_vals_gb$values %>%
+  as_tibble() %>%
+  magrittr::set_colnames(colnames(mod_dat %>% select(-response)))
+expected_value_gb <- py$shap_expected_gb
+```
+
+</div>
+
+<div class="column-left-even">
+
+```{r}
+important_vars <- train_shap_gb %>%
+  pivot_longer(
+    names_to = "variable",
+    values_to = "value",
+    cols = colnames(.)
+  ) %>%
+  mutate(value = abs(value)) %>%
+  group_by(variable) %>%
+  summarize(avg_value = mean(value)) %>%
+  ungroup() %>%
+  arrange(avg_value) %>%
+  pull(variable)
+
+train_shap_gb %>%
+  pivot_longer(
+    names_to = "variable",
+    values_to = "value",
+    cols = colnames(.)
+  ) %>%
+  bind_cols(var_val = variable_values$var_val) %>%
+  mutate(variable = factor(variable, levels = important_vars)) %>%
+  ggplot() +
+  geom_quasirandom(
+    aes(y = variable, x = value, color = var_val),
+    groupOnX = FALSE,
+    size = 2
+  ) + 
+  theme_classic() +
+  xlab("SHAP Value") +
+  ylab("Variable") +
+  scale_color_gradient2(
+    high = "#0D3B66",
+    mid = "#FAF0CA",
+    low = "#A54657",
+    midpoint = 0.5,
+    breaks = c(0.1, 0.9),
+    labels = c("Low", "High")
+  ) +
+  ggtitle("SHAP Value Summary") +
+  labs(color = "Value of Variable") +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    legend.position = c(0.8, 0.2),
+    aspect.ratio = 0.75,
+    plot.title = element_text(hjust = 0.5, size = 18),
+    legend.background = element_rect(color = "#0D3B66", fill = "#ffffff")
+  ) +
+  guides(
+    color = guide_colorbar(
+      label = TRUE,
+      title.position = "top",
+      title.hjust = 0.5,
+      ticks = FALSE,
+      direction = "horizontal",
+      barwidth = unit(1.5, "in"),
+      barheight = unit(0.1, "in")
+    )
+  )
+```
+
+</div>
+
+<div class="column-right-even">
+
+<div style="background:#FAF0CA; border:black solid 3px; margin-left:20px; margin-right:20px;">
+
+```{r}
+resid <- train_preds_gb %>%
+  as_tibble() %>%
+  rename(predict = value) %>%
+  bind_cols(actual = mod_dat$response) %>%
+  mutate(across(everything(), ~(exp(.x) - 1.1))) %>%
+  mutate(differences = actual - predict) %>%
+  pull(differences)
+p(
+  tags$u(tags$b("Model Info and Metrics")),
+  style = "font-family:Times New Roman; font-size:14pt"
+)
+tags$ul(
+  tags$li(str_c("learn_rate: ", best_gb$learn_rate, ", mtry: ", best_gb$mtry, ", tree_depth: ", best_gb$tree_depth)),
+  tags$li(str_c("Mean Absolute Error: ", round(mean(abs(resid)), 4))),
+  tags$li(str_c("Root Mean Squared Error: ", round(sqrt(mean(resid^2)), 4))),
+  style = "text-align:left;font-family:Times New Roman;margin-left:20px"
+)
+```
+</div>
+
+```{r, fig.width = 10, fig.height = 4}
+br()
+ggplot() +
+  aes(x = resid) +
+  geom_density(
+    color = NA,
+    fill = "#A54657",
+    alpha = 0.8
+  ) +
+  xlab("Residuals") +
+  ggtitle("Density of the Residuals") +
+  theme_classic() +
+  theme(
+    aspect.ratio = 0.3,
+    text = element_text(family = "Times New Roman"),
+    axis.title.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    axis.line.y = element_blank(),
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 24
+    ),
+    axis.text.x = element_text(size = 16),
+    axis.title.x = element_text(size = 18)
+  ) +
+  coord_cartesian(clip = "off", expand = FALSE)
+```
+
+</div>
+
+<div class="column-center">
+
+```{r, fig.width=10, fig.height=4}
+train_shap_gb %>%
+  pivot_longer(
+    names_to = "variable",
+    values_to = "value",
+    cols = colnames(.)
+  ) %>%
+  bind_cols(var_val = variable_values$var_val) %>%
+  mutate(variable = factor(variable, levels = important_vars)) %>%
+  ggplot() +
+  aes(x = var_val, y = value) +
+  geom_point(
+    color = "#849698",
+    alpha = 0.8,
+    size = 0.5
+  ) +
+  facet_wrap(~variable, ncol = 5) +
+  theme_bw() +
+  xlab("Scaled Variable Value") +
+  ylab("SHAP Value") +
+  ggtitle("SHAP Values vs. Variable Values") +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    aspect.ratio = 0.75,
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+</div>
 
 
 
@@ -328,6 +735,65 @@ p(
   style = "font-family:Times New Roman; color:#849698; font-size:20pt;"
 )
 ```
+
+```{r}
+most_recent <- combined_dat %>%
+  group_by(ticker) %>%
+  filter(quarter == max(quarter)) %>%
+  slice(1) %>%
+  ungroup() %>%
+  filter(pe_ratio < 5000)
+
+newdata <- most_recent %>%
+  select(
+    colnames(
+      mod_dat %>%
+        select(-response)
+    )
+  ) %>%
+  replace_na(
+    list(
+      avg_pct_change = mean(mod_dat$avg_pct_change, na.rm = TRUE),
+      sd_pct_change = mean(mod_dat$sd_pct_change, na.rm = TRUE),
+      avg_vol = mean(mod_dat$avg_vol, na.rm = TRUE),
+      pe_ratio = mean(mod_dat$pe_ratio, na.rm = TRUE),
+      price_to_sales_ratio = mean(mod_dat$price_to_sales_ratio, na.rm = TRUE),
+      price_to_book_ratio = mean(mod_dat$price_to_book_ratio, na.rm = TRUE),
+      price_to_fcf_ratio = mean(mod_dat$price_to_fcf_ratio, na.rm = TRUE),
+      debt_to_equity_ratio = mean(mod_dat$debt_to_equity_ratio, na.rm = TRUE),
+      pays_dividend = 0,
+      dividend_yield = 0
+    )
+  )
+
+tickers <- most_recent$ticker
+```
+
+```{python}
+dat = r.newdata
+new_preds_gb = gbmod.predict(dat)
+new_preds_rf = rfmod.predict(dat)
+
+new_shap_rf = shap_ex.shap_values(dat)
+new_shap_gb = shap_ex_gb.shap_values(dat)
+```
+
+
+</div>
+
+<div class="column-left-even">
+
+```{r}
+tibble(
+  ticker = tickers,
+  pred_rf = py$new_preds_rf,
+  pred_gb = py$new_preds_gb
+) %>%
+  arrange(desc(pred_rf)) %>%
+  kbl() %>%
+  kable_classic()
+```
+
 
 </div>
 
