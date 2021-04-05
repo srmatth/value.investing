@@ -1,6 +1,6 @@
 #### analyze_industry ----
 analyze_industry <- function(industry) {
-  usethis::ui_info("Getting the tickers for {industry}")
+  logger::log_info("Getting the tickers for {industry}")
   path <- stringr::str_c("data/industries/", industry)
   tickers <- get_filtered_stocks(
     ind = stringr::str_c("ind_", industry), 
@@ -9,11 +9,11 @@ analyze_industry <- function(industry) {
   ) %>% 
     dplyr::pull(ticker)
   
-  usethis::ui_info("Downloading Price data from Yahoo.com for {industry}")
+  logger::log_info("Downloading Price data from Yahoo.com for {industry}")
   if (!fs::dir_exists(path)) fs::dir_create(path)
   download_prices_new(tickers, path)
   
-  usethis::ui_info("Getting Ratio Data for {industry}")
+  logger::log_info("Getting Ratio Data for {industry}")
   ratios <- get_historical_ratios(tickers) %>%
     dplyr::mutate(
       quarter = lubridate::quarter(date, with_year = TRUE)
@@ -27,13 +27,13 @@ analyze_industry <- function(industry) {
       price_to_fcf_ratio,
       debt_to_equity_ratio
     )
-  usethis::ui_info("Saving Ratio Data for {industry}")
+  logger::log_info("Saving Ratio Data for {industry}")
   readr::write_csv(
     ratios,
     stringr::str_c(path, "/", industry, "_ratios.csv")
   )
   
-  usethis::ui_info("Gettig Dividend Data for {industry}")
+  logger::log_info("Gettig Dividend Data for {industry}")
   dividends <- get_historical_dividends(tickers) 
   if (nrow(dividends) == 0) {
     dividends <- data.frame(
@@ -69,7 +69,7 @@ analyze_industry <- function(industry) {
       num_per_year = dplyr::n()
     )
   
-  usethis::ui_info("Combining Data for {industry}")
+  logger::log_info("Combining Data for {industry}")
   price_dat <- get_price_files_new(path) %>%
     dplyr::mutate(
       pct_change = (close - open) / open,
@@ -103,13 +103,13 @@ analyze_industry <- function(industry) {
     ) %>%
     dplyr::filter(!is.na(pe_ratio))
   
-  usethis::ui_info("Saving Combined Data for {industry}")
+  logger::log_info("Saving Combined Data for {industry}")
   readr::write_csv(
     price_dat, 
     stringr::str_c(path, "/", industry, "_combined_data.csv")
   )
   
-  usethis::ui_info("Starting to Create models for {industry}")
+  logger::log_info("Starting to Create models for {industry}")
   
   random_forest_binary(.data = price_dat, industry = industry)
   
@@ -125,7 +125,7 @@ download_prices_new <- function(tickers, dir) {
   purrr::map(
     .x = tickers,
     .f = ~{
-      usethis::ui_info("Downloading price data for {.x}")
+      logger::log_info("Downloading price data for {.x}")
       url <- stringr::str_c(
         "https://query1.finance.yahoo.com/v7/finance/download/",
         .x,
@@ -176,7 +176,7 @@ random_forest_binary <- function(.data, industry) {
     ) %>%
     dplyr::select(-avg_price, -three_year_dividend)
   
-  usethis::ui_info("Compiling model Data for {industry} DRF binary models")
+  logger::log_info("Compiling model Data for {industry} DRF binary models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
@@ -240,7 +240,7 @@ random_forest_binary <- function(.data, industry) {
     grid_sub <- grid %>% dplyr::slice(i)
     
     tryCatch({
-      usethis::ui_info("Starting DRF prob model {i}")
+      logger::log_info("Starting DRF prob model {i}")
       tictoc::tic(stringr::str_c("model", i, sep = " "))
       tmp_mod <- h2o::h2o.randomForest(
         y = "over_40_growth",
@@ -261,7 +261,7 @@ random_forest_binary <- function(.data, industry) {
       )
       time <- tictoc::toc()
       
-      usethis::ui_info("Model {i} trained")
+      logger::log_info("Model {i} trained")
       
       perf <- h2o::h2o.performance(tmp_mod, test)
       threshold_max_f1 <- h2o::h2o.find_threshold_by_max_metric(perf, "f1")
@@ -271,7 +271,7 @@ random_forest_binary <- function(.data, industry) {
         dplyr::pull(threshold) %>%
         min()
       
-      usethis::ui_info("Model {i} tested")
+      logger::log_info("Model {i} tested")
       
       results_tmp <- data.frame(
         mod_num = i,
@@ -307,10 +307,10 @@ random_forest_binary <- function(.data, industry) {
       )
       
       results <- rbind(results, results_tmp)
-      usethis::ui_done("Model {i} finished and data saved")
+      logger::log_success("Model {i} finished and data saved")
     },
     error = function(e) {
-      usethis::ui_oops("Model {i} failed! {e}")
+      logger::log_error("Model {i} failed! {e}")
     })
   }
   
@@ -416,7 +416,7 @@ random_forest_growth <- function(.data, industry) {
     ) %>%
     dplyr::select(-avg_price, -three_year_dividend)
   
-  usethis::ui_info("Compiling model Data for {industry} DRF growth models")
+  logger::log_info("Compiling model Data for {industry} DRF growth models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
@@ -470,7 +470,7 @@ random_forest_growth <- function(.data, industry) {
     grid_sub <- grid %>% dplyr::slice(i)
     
     tryCatch({
-      usethis::ui_info("Starting DRF growth model {i}")
+      logger::log_info("Starting DRF growth model {i}")
       tictoc::tic(stringr::str_c("model", i, sep = " "))
       tmp_mod <- h2o::h2o.randomForest(
         y = "three_year_growth",
@@ -489,7 +489,7 @@ random_forest_growth <- function(.data, industry) {
       )
       time <- tictoc::toc()
       
-      usethis::ui_info("Model {i} trained")
+      logger::log_info("Model {i} trained")
       
       perf <- h2o::h2o.performance(tmp_mod, test)
       
@@ -502,7 +502,7 @@ random_forest_growth <- function(.data, industry) {
             dplyr::mutate(three_year_growth = exp(three_year_growth) - 1.1) %>%
             dplyr::pull(three_year_growth)
         )
-      usethis::ui_info("Model {i} tested")
+      logger::log_info("Model {i} tested")
       
       results_tmp <- data.frame(
         mod_num = i,
@@ -523,10 +523,10 @@ random_forest_growth <- function(.data, industry) {
       )
       
       results <- rbind(results, results_tmp)
-      usethis::ui_done("Model {i} finished and data saved")
+      logger::log_success("Model {i} finished and data saved")
     },
     error = function(e) {
-      usethis::ui_oops("Model {i} failed! {e}")
+      logger::log_error("Model {i} failed! {e}")
     })
   }
   
@@ -590,7 +590,7 @@ gradient_boosted_binary <- function(.data, industry) {
     ) %>%
     dplyr::select(-avg_price, -three_year_dividend)
   
-  usethis::ui_info("Compiling model Data for {industry} GB prob models")
+  logger::log_info("Compiling model Data for {industry} GB prob models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
@@ -655,7 +655,7 @@ gradient_boosted_binary <- function(.data, industry) {
     grid_sub <- grid %>% dplyr::slice(i)
     
     tryCatch({
-      usethis::ui_info("Starting GB prob model {i}")
+      logger::log_info("Starting GB prob model {i}")
       tictoc::tic(stringr::str_c("model", i, sep = " "))
       tmp_mod <- h2o::h2o.gbm(
         y = "over_40_growth",
@@ -677,7 +677,7 @@ gradient_boosted_binary <- function(.data, industry) {
       )
       time <- tictoc::toc()
       
-      usethis::ui_info("Model {i} trained")
+      logger::log_info("Model {i} trained")
       
       perf <- h2o::h2o.performance(tmp_mod, test)
       threshold_max_f1 <- h2o::h2o.find_threshold_by_max_metric(perf, "f1")
@@ -687,7 +687,7 @@ gradient_boosted_binary <- function(.data, industry) {
         dplyr::pull(threshold) %>%
         min()
       
-      usethis::ui_info("Model {i} tested")
+      logger::log_info("Model {i} tested")
       
       results_tmp <- data.frame(
         mod_num = i,
@@ -723,10 +723,10 @@ gradient_boosted_binary <- function(.data, industry) {
       )
       
       results <- rbind(results, results_tmp)
-      usethis::ui_done("Model {i} finished and data saved")
+      logger::log_success("Model {i} finished and data saved")
     },
     error = function(e) {
-      usethis::ui_oops("Model {i} failed! {e}")
+      logger::log_error("Model {i} failed! {e}")
     })
   }
   
@@ -831,7 +831,7 @@ gradient_boosted_growth <- function(.data, industry) {
     ) %>%
     dplyr::select(-avg_price, -three_year_dividend)
   
-  usethis::ui_info("Compiling model data for {industry} GB growth models")
+  logger::log_info("Compiling model data for {industry} GB growth models")
   mod_dat <- .data %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%
@@ -888,7 +888,7 @@ gradient_boosted_growth <- function(.data, industry) {
     grid_sub <- grid %>% dplyr::slice(i)
     
     tryCatch({
-      usethis::ui_info("Starting GB growth model {i}")
+      logger::log_info("Starting GB growth model {i}")
       tictoc::tic(stringr::str_c("model", i, sep = " "))
       tmp_mod <- h2o::h2o.gbm(
         y = "three_year_growth",
@@ -910,7 +910,7 @@ gradient_boosted_growth <- function(.data, industry) {
       )
       time <- tictoc::toc()
       
-      usethis::ui_info("Model {i} trained")
+      logger::log_info("Model {i} trained")
       
       perf <- h2o::h2o.performance(tmp_mod, test)
       
@@ -923,7 +923,7 @@ gradient_boosted_growth <- function(.data, industry) {
             dplyr::mutate(three_year_growth = exp(three_year_growth) - 1.1) %>%
             dplyr::pull(three_year_growth)
         )
-      usethis::ui_info("Model {i} tested")
+      logger::log_info("Model {i} tested")
       
       results_tmp <- data.frame(
         mod_num = i,
@@ -947,10 +947,10 @@ gradient_boosted_growth <- function(.data, industry) {
       )
       
       results <- rbind(results, results_tmp)
-      usethis::ui_done("Model {i} finished and data saved")
+      logger::log_success("Model {i} finished and data saved")
     },
     error = function(e) {
-      usethis::ui_oops("Model {i} failed! {e}")
+      logger::log_error("Model {i} failed! {e}")
     })
   }
   

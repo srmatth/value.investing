@@ -1,6 +1,8 @@
 tune_growth_models <- function(industry, years = 5, verbose = FALSE, nfolds = 10) {
   mod_dat <- growth_model_data(industry, years = years)
   
+  logger::log_info("Tuning Models for {industry}")
+  
   ## RANDOM FOREST
   logger::log_info("Tuning Random Forest Models")
   
@@ -30,13 +32,14 @@ tune_growth_models <- function(industry, years = 5, verbose = FALSE, nfolds = 10
       resamples = folds,
       grid = grid,
       control = tune::control_resamples(verbose = verbose),
-      metrics = yardstick::metric_set(mae, rmse, rsq)
+      metrics = yardstick::metric_set(yardstick::mae, yardstick::rmse, yardstick::rsq)
     )
   tuned %>%
     tune::collect_metrics() %>%
     readr::write_csv(
       stringr::str_c("data/growth_models/", industry, "/rf_metrics.csv")
     )
+  logger::log_success("Random Forest Models Trained and Data Saved")
   
   ## GRADIENT BOOSTING
   logger::log_info("Tuning Gradient Boosted Models")
@@ -69,12 +72,13 @@ tune_growth_models <- function(industry, years = 5, verbose = FALSE, nfolds = 10
       resamples = folds,
       grid = grid,
       control = tune::control_resamples(verbose = verbose),
-      metrics = yardstick::metric_set(mae, rmse, rsq)
+      metrics = yardstick::metric_set(yardstick::mae, yardstick::rmse, yardstick::rsq)
     )
   tuned %>%
     tune::collect_metrics() %>%
     readr::write_csv(
       stringr::str_c("data/growth_models/", industry, "/gb_metrics.csv")
     )
+  logger::log_success("Gradient Boosted Models Trained and Data Saved")
   
 }

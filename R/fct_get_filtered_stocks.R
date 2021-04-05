@@ -40,7 +40,7 @@ get_filtered_stocks <- function(geo = "geo_usa",
   stock_info <- data.frame(stringsAsFactors = FALSE)
   for (i in seq(1, 7531, by = 20)) {
     tryCatch({
-      usethis::ui_info("Reading entries {i} through {i + 19}")
+      logger::log_info("Reading entries {i} through {i + 19}")
       page <- stringr::str_c(
         "https://www.finviz.com/screener.ashx?v=152&f=",
         exchange,
@@ -82,7 +82,7 @@ get_filtered_stocks <- function(geo = "geo_usa",
         stock_info <- rbind(stock_info, new_data)
       } else if (new_data %>% dplyr::slice(dplyr::n()) %>% dplyr::pull(ticker) == 
           stock_info %>% dplyr::slice(dplyr::n()) %>% dplyr::pull(ticker)) {
-        usethis::ui_done("Finished retrieving data, the filters you set returned {nrow(stock_info)} stocks")
+        logger::log_success("Finished retrieving data, the filters you set returned {nrow(stock_info)} stocks")
         break 
       } else {
         stock_info <- rbind(stock_info, new_data)
@@ -90,11 +90,11 @@ get_filtered_stocks <- function(geo = "geo_usa",
       Sys.sleep(.5)
     },
     error = function(e) {
-      usethis::ui_oops("There was an error with this page: {e}")
+      logger::log_error("There was an error with this page: {e}")
     })
   }
   if (all_data) {
-    usethis::ui_info("Cleaning data...")
+    logger::log_info("Cleaning data...")
     subset <- stock_info %>% 
       dplyr::select(market_cap:volume) %>%
       purrr::map(string_to_numeric) %>%
@@ -102,7 +102,7 @@ get_filtered_stocks <- function(geo = "geo_usa",
     stock_info <- stock_info %>%
       dplyr::select(ticker:country) %>%
       cbind(subset)
-    usethis::ui_done("Done!")
+    logger::log_success("Done!")
   }
   return(stock_info)
 }

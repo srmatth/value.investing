@@ -22,7 +22,7 @@ get_historical_dividends <- function(tickers, start_date = NULL, verbose = TRUE)
     .x = tickers,
     .f = ~{
       tryCatch({
-        if (verbose) usethis::ui_info("Fetching dividend data for {.x}")
+        if (verbose) logger::log_info("Fetching dividend data for {.x}")
         page <- xml2::read_html(
           stringr::str_c(
             "https://www.dividendinformation.com/search_ticker/?identifier=",
@@ -52,11 +52,11 @@ get_historical_dividends <- function(tickers, start_date = NULL, verbose = TRUE)
           dividend_data <- dividend_data %>%
             dplyr::filter(date >= lubridate::ymd(start_date))
         }
-        if (verbose) usethis::ui_done("Dividend data for {.x} downloaded")
+        if (verbose) logger::log_success("Dividend data for {.x} downloaded")
         return(dividend_data)
       },
       error = function(e) {
-        usethis::ui_oops("The ticker {.x} does not have dividend history")
+        logger::log_error("The ticker {.x} does not have dividend history")
         return(NULL)
       })
     })
@@ -82,7 +82,7 @@ get_historical_ratios <- function(tickers, ratios = c("pe-ratio",
                                                       "price-fcf",
                                                       "debt-equity-ratio")) {
   purrr::map_dfr(.x = tickers, ~{
-    usethis::ui_info("Retrieving historical ratios for ({.x})")
+    logger::log_info("Retrieving historical ratios for ({.x})")
     tryCatch({
       dat <- data.frame(stringsAsFactors = FALSE)
       for (i in ratios) {
@@ -124,7 +124,7 @@ get_historical_ratios <- function(tickers, ratios = c("pe-ratio",
         dplyr::mutate(ticker = .x)
     },
     error = function(e) {
-      usethis::ui_oops("Historical ratios for ({.x}) not found! {e}")
+      logger::log_error("Historical ratios for ({.x}) not found! {e}")
       return(NULL)
     })
   })
@@ -142,7 +142,7 @@ get_historical_prices <- function(tickers) {
   purrr::map_dfr(
     .x = toupper(tickers),
     .f = ~{
-      usethis::ui_info("Downloading price data for {.x}")
+      logger::log_info("Downloading price data for {.x}")
       url <- stringr::str_c(
         "https://query1.finance.yahoo.com/v7/finance/download/",
         .x,

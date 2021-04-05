@@ -90,7 +90,7 @@ get_latest_quarter <- function(tickers) {
 }
 
 get_mod_dat <- function(industry) {
-  usethis::ui_info("Getting the tickers for {industry}")
+  logger::log_info("Getting the tickers for {industry}")
   path <- stringr::str_c("data/growth_models/", industry)
   tickers <- get_filtered_stocks(
     ind = stringr::str_c("ind_", industry), 
@@ -99,11 +99,11 @@ get_mod_dat <- function(industry) {
   ) %>% 
     dplyr::pull(ticker)
   
-  usethis::ui_info("Downloading Price data from Yahoo.com for {industry}")
+  logger::log_info("Downloading Price data from Yahoo.com for {industry}")
   if (!fs::dir_exists(path)) fs::dir_create(path)
   download_prices_new(tickers, path)
   
-  usethis::ui_info("Getting Ratio Data for {industry}")
+  logger::log_info("Getting Ratio Data for {industry}")
   ratios <- get_historical_ratios(tickers) %>%
     dplyr::mutate(
       quarter = lubridate::quarter(date, with_year = TRUE)
@@ -117,13 +117,13 @@ get_mod_dat <- function(industry) {
       price_to_fcf_ratio,
       debt_to_equity_ratio
     )
-  usethis::ui_info("Saving Ratio Data for {industry}")
+  logger::log_info("Saving Ratio Data for {industry}")
   readr::write_csv(
     ratios,
     stringr::str_c(path, "/", industry, "_ratios.csv")
   )
   
-  usethis::ui_info("Gettig Dividend Data for {industry}")
+  logger::log_info("Gettig Dividend Data for {industry}")
   dividends <- get_historical_dividends(tickers) 
   if (nrow(dividends) == 0) {
     dividends <- data.frame(
@@ -159,7 +159,7 @@ get_mod_dat <- function(industry) {
       num_per_year = dplyr::n()
     )
   
-  usethis::ui_info("Combining Data for {industry}")
+  logger::log_info("Combining Data for {industry}")
   price_dat <- get_price_files_new(path) %>%
     dplyr::mutate(
       pct_change = (close - open) / open,
@@ -201,7 +201,7 @@ get_mod_dat <- function(industry) {
     ) %>%
     dplyr::select(-avg_price, -three_year_dividend)
   
-  usethis::ui_info("Compiling model Data for {industry} DRF growth models")
+  logger::log_info("Compiling model Data for {industry} DRF growth models")
   price_dat %>%
     dplyr::left_join(response, by = c("ticker", "quarter")) %>%
     dplyr::ungroup() %>%

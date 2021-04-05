@@ -2,7 +2,7 @@ get_industry_data <- function(industry_full) {
   industry_abbr <- get_industry_abbreviations() %>%
     dplyr::filter(industry_name == industry_full) %>%
     dplyr::pull(abbreviation)
-  usethis::ui_info("Getting the tickers for {industry_full}")
+  logger::log_info("Getting the tickers for {industry_full}")
   path <- stringr::str_c("data/growth_models/", industry_full)
   tickers <- get_filtered_stocks(
     ind = stringr::str_c("ind_", industry_abbr), 
@@ -11,11 +11,11 @@ get_industry_data <- function(industry_full) {
   ) %>% 
     dplyr::pull(ticker)
   
-  usethis::ui_info("Downloading Price data from Yahoo.com for {industry_full}")
+  logger::log_info("Downloading Price data from Yahoo.com for {industry_full}")
   if (!fs::dir_exists(path)) fs::dir_create(path)
   download_prices_new(tickers, path)
   
-  usethis::ui_info("Getting Ratio Data for {industry_full}")
+  logger::log_info("Getting Ratio Data for {industry_full}")
   ratios <- get_historical_ratios(tickers) %>%
     dplyr::mutate(
       quarter = lubridate::quarter(date, with_year = TRUE)
@@ -29,13 +29,13 @@ get_industry_data <- function(industry_full) {
       price_to_fcf_ratio,
       debt_to_equity_ratio
     )
-  usethis::ui_info("Saving Ratio Data for {industry_full}")
+  logger::log_info("Saving Ratio Data for {industry_full}")
   readr::write_csv(
     ratios,
     stringr::str_c(path, "/", "ratios.csv")
   )
   
-  usethis::ui_info("Gettig Dividend Data for {industry_full}")
+  logger::log_info("Gettig Dividend Data for {industry_full}")
   dividends <- get_historical_dividends(tickers) 
   if (nrow(dividends) == 0) {
     dividends <- data.frame(
@@ -71,7 +71,7 @@ get_industry_data <- function(industry_full) {
       num_per_year = dplyr::n()
     )
   
-  usethis::ui_info("Combining Data for {industry_full}")
+  logger::log_info("Combining Data for {industry_full}")
   price_dat <- get_price_files_new(path) %>%
     dplyr::mutate(
       pct_change = (close - open) / open,
@@ -105,7 +105,7 @@ get_industry_data <- function(industry_full) {
     ) %>%
     dplyr::filter(!is.na(pe_ratio))
   
-  usethis::ui_info("Saving Combined Data for {industry_full}")
+  logger::log_info("Saving Combined Data for {industry_full}")
   readr::write_csv(
     price_dat, 
     stringr::str_c(path, "/", "combined_data.csv")

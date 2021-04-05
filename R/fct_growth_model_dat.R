@@ -24,9 +24,10 @@ growth_model_data <- function(industry, years = 5) {
       -yearly_amount_per_share,
       -num_per_year,
       -three_year_dividend
-    )
+    ) %>%
+    tidyr::drop_na()
   
-  usethis::ui_info("Saving Model Data for {industry}")
+  logger::log_info("Saving Model Data for {industry}")
   path <- stringr::str_c("data/growth_models/", industry)
   readr::write_csv(
     mod_dat, 
