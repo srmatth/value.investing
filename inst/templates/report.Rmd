@@ -7,7 +7,7 @@ output:
     keep_md: false
     css: "report.css"
 params:
-  industry: "Grocery Stores"
+  industry: "Aluminum"
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
@@ -24,6 +24,7 @@ library(ggbeeswarm)
 library(tidyr)
 library(knitr)
 library(kableExtra)
+library(zoo)
 
 suppressMessages(loadfonts())
 
@@ -739,10 +740,19 @@ p(
 ```{r}
 most_recent <- combined_dat %>%
   group_by(ticker) %>%
+  arrange(quarter) %>%
+  mutate(across(everything(), .fns = ~na.locf(.x, na.rm = FALSE))) %>%
   filter(quarter == max(quarter)) %>%
   slice(1) %>%
   ungroup() %>%
-  filter(pe_ratio < 5000)
+  drop_na() %>%
+  filter(
+    pe_ratio < 5000,
+    price_to_book_ratio < 5000,
+    price_to_sales_ratio < 5000,
+    price_to_fcf_ratio < 5000,
+    debt_to_equity_ratio < 5000
+  )
 
 newdata <- most_recent %>%
   select(
@@ -750,21 +760,21 @@ newdata <- most_recent %>%
       mod_dat %>%
         select(-response)
     )
-  ) %>%
-  replace_na(
-    list(
-      avg_pct_change = mean(mod_dat$avg_pct_change, na.rm = TRUE),
-      sd_pct_change = mean(mod_dat$sd_pct_change, na.rm = TRUE),
-      avg_vol = mean(mod_dat$avg_vol, na.rm = TRUE),
-      pe_ratio = mean(mod_dat$pe_ratio, na.rm = TRUE),
-      price_to_sales_ratio = mean(mod_dat$price_to_sales_ratio, na.rm = TRUE),
-      price_to_book_ratio = mean(mod_dat$price_to_book_ratio, na.rm = TRUE),
-      price_to_fcf_ratio = mean(mod_dat$price_to_fcf_ratio, na.rm = TRUE),
-      debt_to_equity_ratio = mean(mod_dat$debt_to_equity_ratio, na.rm = TRUE),
-      pays_dividend = 0,
-      dividend_yield = 0
-    )
-  )
+  ) # %>%
+  # replace_na(
+  #   list(
+  #     avg_pct_change = median(mod_dat$avg_pct_change, na.rm = TRUE),
+  #     sd_pct_change = median(mod_dat$sd_pct_change, na.rm = TRUE),
+  #     avg_vol = median(mod_dat$avg_vol, na.rm = TRUE),
+  #     pe_ratio = median(mod_dat$pe_ratio, na.rm = TRUE),
+  #     price_to_sales_ratio = median(mod_dat$price_to_sales_ratio, na.rm = TRUE),
+  #     price_to_book_ratio = median(mod_dat$price_to_book_ratio, na.rm = TRUE),
+  #     price_to_fcf_ratio = median(mod_dat$price_to_fcf_ratio, na.rm = TRUE),
+  #     debt_to_equity_ratio = median(mod_dat$debt_to_equity_ratio, na.rm = TRUE),
+  #     pays_dividend = 0,
+  #     dividend_yield = 0
+  #   )
+  # )
 
 tickers <- most_recent$ticker
 ```
@@ -786,19 +796,44 @@ new_shap_gb = shap_ex_gb.shap_values(dat)
 ```{r}
 tibble(
   ticker = tickers,
+  quarter = str_replace(most_recent$quarter, "\\.", " Q"),
+  price = str_c("$", round(most_recent$avg_price, 2)),
   pred_rf = py$new_preds_rf,
-  pred_gb = py$new_preds_gb
+  pred_gb = str_c(round(py$new_preds_gb * 100, 2), "%")
 ) %>%
   arrange(desc(pred_rf)) %>%
-  kbl() %>%
+  mutate(pred_rf = str_c(round(pred_rf * 100, 2), "%")) %>%
+  kbl(
+    col.names = c(
+      "Company",
+      "Quarter",
+      "Price",
+      "RF Prediction",
+      "GB Prediction"
+    )
+  ) %>%
   kable_classic()
 ```
 
 
 </div>
 
+<div class="column-right-even">
+
+```{r}
+py$new_shap_rf %>%
+  as.data.frame() %>%
+  magrittr::set_colnames(colnames(mod_dat %>% select(-response))) %>%
+  mutate(ticker = tickers) %>%
+  pivot_longer(
+    cols = colnames(select(., -ticker)),
+    names_to = "covariate",
+    values_to = "shap_val"
+  )
+```
 
 
+</div>
 
 
 <div class="column-center">
