@@ -82,7 +82,7 @@ get_historical_ratios <- function(tickers, ratios = c("pe-ratio",
                                                       "price-fcf",
                                                       "debt-equity-ratio")) {
   purrr::map_dfr(.x = tickers, ~{
-    logger::log_info("Retrieving historical ratios for ({.x})")
+    logger::log_info("Retrieving historical ratios for {.x}")
     tryCatch({
       dat <- data.frame(stringsAsFactors = FALSE)
       for (i in ratios) {
