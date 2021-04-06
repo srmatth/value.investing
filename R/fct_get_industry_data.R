@@ -17,6 +17,7 @@ get_industry_data <- function(industry_full) {
   
   logger::log_info("Getting Ratio Data for {industry_full}")
   ratios <- get_historical_ratios(tickers) %>%
+    filter(date != "", !is.na(date)) %>%
     dplyr::mutate(
       quarter = lubridate::quarter(date, with_year = TRUE)
     ) %>% 
