@@ -7,7 +7,7 @@ output:
     keep_md: false
     css: "report.css"
 params:
-  industry: "Airlines"
+  industry: "Auto Parts"
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
@@ -147,6 +147,45 @@ corrplot(
   col = colorRampPalette(colors = c("#EE964B", "#FAF0CA", "#0D3B66"))(200)
 )
 ```
+</div>
+
+<div class="column-center">
+```{r}
+mod_dat %>%
+  purrr::map_dfr(
+    .f = ~{
+      data.frame(
+        min = min(.x),
+        first_quart = quantile(.x, 0.25),
+        median = median(.x),
+        mean = mean(.x),
+        third_quart = quantile(.x, 0.75),
+        max = max(.x)
+      )
+    }
+  ) %>%
+  t() %>%
+  as.data.frame() %>%
+  magrittr::set_colnames(colnames(mod_dat)) %>%
+  mutate(
+    across(
+      everything(),
+      .fns = ~signif(.x, 3)
+    ),
+    across(
+      .cols = c("avg_pct_change", "sd_pct_change", "dividend_yield"),
+      .fns = ~str_c(round(.x * 100, 1), "%")
+    )
+  ) %>%
+  # mutate(variable = colnames(mod_dat)) %>%
+  # magrittr::set_rownames(NULL) %>%
+  # select(variable, everything()) %>%
+  kbl(
+    col.names = snakecase::to_title_case(colnames(mod_dat))
+  ) %>%
+  kable_classic(html_font = "'Times New Roman'")
+```
+
 </div>
 
 <div class="column-center">
@@ -739,6 +778,7 @@ p(
 
 ```{r}
 most_recent <- combined_dat %>%
+  filter(quarter != lubridate::quarter(Sys.Date(), with_year = TRUE)) %>%
   group_by(ticker) %>%
   arrange(quarter) %>%
   mutate(across(everything(), .fns = ~na.locf(.x, na.rm = FALSE))) %>%
@@ -799,10 +839,15 @@ tibble(
   quarter = str_replace(most_recent$quarter, "\\.", " Q"),
   price = str_c("$", round(most_recent$avg_price, 2)),
   pred_rf = py$new_preds_rf,
-  pred_gb = str_c(round(py$new_preds_gb * 100, 2), "%")
+  pred_gb = py$new_preds_gb
 ) %>%
   arrange(desc(pred_rf)) %>%
-  mutate(pred_rf = str_c(round(pred_rf * 100, 2), "%")) %>%
+  mutate(
+    pred_rf = exp(pred_rf) - 1.1,
+    pred_gb = exp(pred_gb) - 1.1,
+    pred_rf = str_c(round(pred_rf * 100, 2), "%"),
+    pred_gb = str_c(round(pred_gb * 100, 2), "%")
+  ) %>%
   kbl(
     col.names = c(
       "Company",
@@ -813,6 +858,7 @@ tibble(
     )
   ) %>%
   kable_classic(html_font = "'Times New Roman'") %>%
+  kable_styling(full_width = FALSE) %>%
   column_spec(
     column = 1:5,
     width = "8em"
@@ -894,7 +940,7 @@ d %>%
     size = 1.5
   ) +
   geom_rect(stat = "identity") +
-  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  scale_fill_manual(values = setNames(c("#A54657", "#0D3B66"), c(FALSE, TRUE))) +
   coord_flip(clip = "off") +
   geom_segment(
     aes(
@@ -914,11 +960,23 @@ d %>%
   ) +
   scale_y_continuous(
     breaks = expected_value,
-    labels = str_c("Baseline:\n", round(expected_value * 100, 1), "%"),
+    labels = str_c(
+      "Baseline:\n", 
+      round(expected_value, 3), 
+      " (", 
+      round((exp(expected_value) - 1.1) * 100, 1), 
+      "%)"
+    ),
     sec.axis = sec_axis(
       ~.,
       breaks = top_3$pred_rf[1],
-      labels = str_c("Model Prediction:\n", round(top_3$pred_rf[1] * 100, 1), "%")
+      labels = str_c(
+        "Model Prediction:\n", 
+        round(top_3$pred_rf[1], 3), 
+        " (",
+        round((exp(top_3$pred_rf[1]) - 1.1) * 100, 1),
+        "%)"
+      )
     )
   ) +
   scale_x_discrete(
@@ -968,7 +1026,7 @@ d %>%
     size = 1.5
   ) +
   geom_rect(stat = "identity") +
-  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  scale_fill_manual(values = setNames(c("#A54657", "#0D3B66"), c(FALSE, TRUE))) +
   coord_flip(clip = "off") +
   geom_segment(
     aes(
@@ -988,11 +1046,23 @@ d %>%
   ) +
   scale_y_continuous(
     breaks = expected_value,
-    labels = str_c("Baseline:\n", round(expected_value * 100, 1), "%"),
+    labels = str_c(
+      "Baseline:\n", 
+      round(expected_value, 3), 
+      " (", 
+      round((exp(expected_value) - 1.1) * 100, 1), 
+      "%)"
+    ),
     sec.axis = sec_axis(
       ~.,
       breaks = top_3$pred_rf[2],
-      labels = str_c("Model Prediction:\n", round(top_3$pred_rf[2] * 100, 1), "%")
+      labels = str_c(
+        "Model Prediction:\n", 
+        round(top_3$pred_rf[2], 3), 
+        " (",
+        round((exp(top_3$pred_rf[2]) - 1.1) * 100, 1),
+        "%)"
+      )
     )
   ) +
   scale_x_discrete(
@@ -1042,7 +1112,7 @@ d %>%
     size = 1.5
   ) +
   geom_rect(stat = "identity") +
-  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  scale_fill_manual(values = setNames(c("#A54657", "#0D3B66"), c(FALSE, TRUE))) +
   coord_flip(clip = "off") +
   geom_segment(
     aes(
@@ -1062,11 +1132,23 @@ d %>%
   ) +
   scale_y_continuous(
     breaks = expected_value,
-    labels = str_c("Baseline:\n", round(expected_value * 100, 1), "%"),
+    labels = str_c(
+      "Baseline:\n", 
+      round(expected_value, 3), 
+      " (", 
+      round((exp(expected_value) - 1.1) * 100, 1), 
+      "%)"
+    ),
     sec.axis = sec_axis(
       ~.,
       breaks = top_3$pred_rf[3],
-      labels = str_c("Model Prediction:\n", round(top_3$pred_rf[3] * 100, 1), "%")
+      labels = str_c(
+        "Model Prediction:\n", 
+        round(top_3$pred_rf[3], 3), 
+        " (",
+        round((exp(top_3$pred_rf[3]) - 1.1) * 100, 1),
+        "%)"
+      )
     )
   ) +
   scale_x_discrete(
@@ -1123,7 +1205,7 @@ d %>%
     size = 1.5
   ) +
   geom_rect(stat = "identity") +
-  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  scale_fill_manual(values = setNames(c("#A54657", "#0D3B66"), c(FALSE, TRUE))) +
   coord_flip(clip = "off") +
   geom_segment(
     aes(
@@ -1143,11 +1225,23 @@ d %>%
   ) +
   scale_y_continuous(
     breaks = expected_value_gb,
-    labels = str_c("Baseline:\n", round(expected_value_gb * 100, 1), "%"),
+    labels = str_c(
+      "Baseline:\n", 
+      round(expected_value_gb, 3), 
+      " (", 
+      round((exp(expected_value_gb) - 1.1) * 100, 1), 
+      "%)"
+    ),
     sec.axis = sec_axis(
       ~.,
       breaks = top_3$pred_gb[1],
-      labels = str_c("Model Prediction:\n", round(top_3$pred_gb[1] * 100, 1), "%")
+      labels = str_c(
+        "Model Prediction:\n", 
+        round(top_3$pred_gb[1], 3), 
+        " (",
+        round((exp(top_3$pred_gb[1]) - 1.1) * 100, 1),
+        "%)"
+      )
     )
   ) +
   scale_x_discrete(
@@ -1197,7 +1291,7 @@ d %>%
     size = 1.5
   ) +
   geom_rect(stat = "identity") +
-  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  scale_fill_manual(values = setNames(c("#A54657", "#0D3B66"), c(FALSE, TRUE))) +
   coord_flip(clip = "off") +
   geom_segment(
     aes(
@@ -1217,11 +1311,23 @@ d %>%
   ) +
   scale_y_continuous(
     breaks = expected_value_gb,
-    labels = str_c("Baseline:\n", round(expected_value_gb * 100, 1), "%"),
+    labels = str_c(
+      "Baseline:\n", 
+      round(expected_value_gb, 3), 
+      " (", 
+      round((exp(expected_value_gb) - 1.1) * 100, 1), 
+      "%)"
+    ),
     sec.axis = sec_axis(
       ~.,
       breaks = top_3$pred_gb[2],
-      labels = str_c("Model Prediction:\n", round(top_3$pred_gb[2] * 100, 1), "%")
+      labels = str_c(
+        "Model Prediction:\n", 
+        round(top_3$pred_gb[2], 3), 
+        " (",
+        round((exp(top_3$pred_gb[2]) - 1.1) * 100, 1),
+        "%)"
+      )
     )
   ) +
   scale_x_discrete(
@@ -1271,7 +1377,7 @@ d %>%
     size = 1.5
   ) +
   geom_rect(stat = "identity") +
-  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  scale_fill_manual(values = setNames(c("#A54657", "#0D3B66"), c(FALSE, TRUE))) +
   coord_flip(clip = "off") +
   geom_segment(
     aes(
@@ -1291,11 +1397,23 @@ d %>%
   ) +
   scale_y_continuous(
     breaks = expected_value_gb,
-    labels = str_c("Baseline:\n", round(expected_value_gb * 100, 1), "%"),
+    labels = str_c(
+      "Baseline:\n", 
+      round(expected_value_gb, 3), 
+      " (", 
+      round((exp(expected_value_gb) - 1.1) * 100, 1), 
+      "%)"
+    ),
     sec.axis = sec_axis(
       ~.,
       breaks = top_3$pred_gb[3],
-      labels = str_c("Model Prediction:\n", round(top_3$pred_gb[3] * 100, 1), "%")
+      labels = str_c(
+        "Model Prediction:\n", 
+        round(top_3$pred_gb[3], 3), 
+        " (",
+        round((exp(top_3$pred_gb[3]) - 1.1) * 100, 1),
+        "%)"
+      )
     )
   ) +
   scale_x_discrete(
