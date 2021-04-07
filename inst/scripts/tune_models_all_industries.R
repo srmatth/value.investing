@@ -18,7 +18,16 @@ toc() # 6892.15 seconds for first 8, 2468 seconds for the next 2,
 
 
 tic("Finish the Industries")
-subset <- abbr$industry_name[21:40]
+subset <- abbr$industry_name[29:40]
+test <- purrr::map(
+  .x = subset,
+  .f = tune_growth_models
+)
+beepr::beep(9)
+toc()
+
+tic("Finish the Industries")
+subset <- abbr$industry_name[41:50]
 test <- purrr::map(
   .x = subset,
   .f = tune_growth_models
