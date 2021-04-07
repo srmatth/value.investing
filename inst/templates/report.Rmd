@@ -7,7 +7,7 @@ output:
     keep_md: false
     css: "report.css"
 params:
-  industry: "Aluminum"
+  industry: "Airlines"
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
@@ -791,7 +791,7 @@ new_shap_gb = shap_ex_gb.shap_values(dat)
 
 </div>
 
-<div class="column-left-even">
+<div class="column-center">
 
 ```{r}
 tibble(
@@ -812,7 +812,283 @@ tibble(
       "GB Prediction"
     )
   ) %>%
-  kable_classic()
+  kable_classic(html_font = "'Times New Roman'") %>%
+  column_spec(
+    column = 1:5,
+    width = "8em"
+  )
+```
+
+
+</div>
+
+<div class="column-left-even">
+
+```{r}
+top_3 <- tibble(
+  ticker = tickers,
+  quarter = str_replace(most_recent$quarter, "\\.", " Q"),
+  price = str_c("$", round(most_recent$avg_price, 2)),
+  pred_rf = py$new_preds_rf,
+  pred_gb = py$new_preds_gb
+) %>%
+  arrange(desc(pred_rf)) %>%
+  slice(1:3)
+individual_shap <- py$new_shap_rf %>%
+  as.data.frame() %>%
+  magrittr::set_colnames(colnames(mod_dat %>% select(-response))) %>%
+  mutate(ticker = tickers) %>%
+  pivot_longer(
+    cols = colnames(select(., -ticker)),
+    names_to = "covariate",
+    values_to = "shap_val"
+  ) %>%
+  full_join(
+    newdata %>%
+      mutate(ticker = tickers) %>%
+      pivot_longer(
+        cols = colnames(select(., -ticker)),
+        names_to = "covariate",
+        values_to = "var_val"
+      ),
+    by = c("ticker", "covariate")
+  ) %>%
+  full_join(
+    py$new_shap_gb %>%
+      as.data.frame() %>%
+      magrittr::set_colnames(colnames(mod_dat %>% select(-response))) %>%
+      mutate(ticker = tickers) %>%
+      pivot_longer(
+        cols = colnames(select(., -ticker)),
+        names_to = "covariate",
+        values_to = "shap_val_gb"
+      ),
+    by = c("ticker", "covariate")
+  )
+```
+
+```{r}
+d <- individual_shap %>%
+  filter(ticker == top_3$ticker[1]) %>%
+  mutate(covariate = forcats::fct_reorder(covariate, shap_val, abs)) %>%
+  arrange(desc(covariate)) %>%
+  mutate(
+    bar_end = cumsum(shap_val) + c(expected_value),
+    bar_start = c(expected_value, head(bar_end, -1)),
+    is_positive = shap_val > 0
+  ) 
+d %>%
+  ggplot() +
+  aes(
+    x = covariate, 
+    xmin = as.numeric(covariate) - 0.25, 
+    xmax = as.numeric(covariate) + 0.25, 
+    ymin = bar_end, 
+    ymax = bar_start, 
+    label = var_val,
+    fill = is_positive
+  ) + 
+  geom_hline(
+    aes(yintercept = expected_value),
+    color = "#849698",
+    size = 1.5
+  ) +
+  geom_rect(stat = "identity") +
+  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  coord_flip(clip = "off") +
+  geom_segment(
+    aes(
+      y = bar_end,
+      yend = bar_end,
+      x = as.numeric(covariate) + 0.25,
+      xend = as.numeric(covariate) - 1.25
+    ),
+    color = "#849698",
+    lwd = 1
+  ) +
+  theme_classic() +
+  geom_hline(
+    aes(yintercept = top_3$pred_rf[1]),
+    color = "#EE964B",
+    size = 1.5
+  ) +
+  scale_y_continuous(
+    breaks = expected_value,
+    labels = str_c("Baseline:\n", round(expected_value * 100, 1), "%"),
+    sec.axis = sec_axis(
+      ~.,
+      breaks = top_3$pred_rf[1],
+      labels = str_c("Model Prediction:\n", round(top_3$pred_rf[1] * 100, 1), "%")
+    )
+  ) +
+  scale_x_discrete(
+    labels = rev(str_c(d$covariate, "\n", signif(d$var_val, 3)))
+  ) +
+  ggtitle(top_3$ticker[1], "RF Prediction Explained") +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    legend.position = "none",
+    axis.text.y = element_text(
+      family = "Times New Roman",
+      size = 10
+    ),
+    axis.text.x = element_text(
+      family = "Times New Roman",
+      size = 12,
+      hjust = 0.5
+    ),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+###########################
+d <- individual_shap %>%
+  filter(ticker == top_3$ticker[2]) %>%
+  mutate(covariate = forcats::fct_reorder(covariate, shap_val, abs)) %>%
+  arrange(desc(covariate)) %>%
+  mutate(
+    bar_end = cumsum(shap_val) + c(expected_value),
+    bar_start = c(expected_value, head(bar_end, -1)),
+    is_positive = shap_val > 0
+  ) 
+d %>%
+  ggplot() +
+  aes(
+    x = covariate, 
+    xmin = as.numeric(covariate) - 0.25, 
+    xmax = as.numeric(covariate) + 0.25, 
+    ymin = bar_end, 
+    ymax = bar_start, 
+    label = var_val,
+    fill = is_positive
+  ) + 
+  geom_hline(
+    aes(yintercept = expected_value),
+    color = "#849698",
+    size = 1.5
+  ) +
+  geom_rect(stat = "identity") +
+  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  coord_flip(clip = "off") +
+  geom_segment(
+    aes(
+      y = bar_end,
+      yend = bar_end,
+      x = as.numeric(covariate) + 0.25,
+      xend = as.numeric(covariate) - 1.25
+    ),
+    color = "#849698",
+    lwd = 1
+  ) +
+  theme_classic() +
+  geom_hline(
+    aes(yintercept = top_3$pred_rf[2]),
+    color = "#EE964B",
+    size = 1.5
+  ) +
+  scale_y_continuous(
+    breaks = expected_value,
+    labels = str_c("Baseline:\n", round(expected_value * 100, 1), "%"),
+    sec.axis = sec_axis(
+      ~.,
+      breaks = top_3$pred_rf[2],
+      labels = str_c("Model Prediction:\n", round(top_3$pred_rf[2] * 100, 1), "%")
+    )
+  ) +
+  scale_x_discrete(
+    labels = rev(str_c(d$covariate, "\n", signif(d$var_val, 3)))
+  ) +
+  ggtitle(top_3$ticker[2], "RF Prediction Explained") +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    legend.position = "none",
+    axis.text.y = element_text(
+      family = "Times New Roman",
+      size = 10
+    ),
+    axis.text.x = element_text(
+      family = "Times New Roman",
+      size = 12,
+      hjust = 0.5
+    ),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+#############################
+d <- individual_shap %>%
+  filter(ticker == top_3$ticker[3]) %>%
+  mutate(covariate = forcats::fct_reorder(covariate, shap_val, abs)) %>%
+  arrange(desc(covariate)) %>%
+  mutate(
+    bar_end = cumsum(shap_val) + c(expected_value),
+    bar_start = c(expected_value, head(bar_end, -1)),
+    is_positive = shap_val > 0
+  ) 
+d %>%
+  ggplot() +
+  aes(
+    x = covariate, 
+    xmin = as.numeric(covariate) - 0.25, 
+    xmax = as.numeric(covariate) + 0.25, 
+    ymin = bar_end, 
+    ymax = bar_start, 
+    label = var_val,
+    fill = is_positive
+  ) + 
+  geom_hline(
+    aes(yintercept = expected_value),
+    color = "#849698",
+    size = 1.5
+  ) +
+  geom_rect(stat = "identity") +
+  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  coord_flip(clip = "off") +
+  geom_segment(
+    aes(
+      y = bar_end,
+      yend = bar_end,
+      x = as.numeric(covariate) + 0.25,
+      xend = as.numeric(covariate) - 1.25
+    ),
+    color = "#849698",
+    lwd = 1
+  ) +
+  theme_classic() +
+  geom_hline(
+    aes(yintercept = top_3$pred_rf[3]),
+    color = "#EE964B",
+    size = 1.5
+  ) +
+  scale_y_continuous(
+    breaks = expected_value,
+    labels = str_c("Baseline:\n", round(expected_value * 100, 1), "%"),
+    sec.axis = sec_axis(
+      ~.,
+      breaks = top_3$pred_rf[3],
+      labels = str_c("Model Prediction:\n", round(top_3$pred_rf[3] * 100, 1), "%")
+    )
+  ) +
+  scale_x_discrete(
+    labels = rev(str_c(d$covariate, "\n", signif(d$var_val, 3)))
+  ) +
+  ggtitle(top_3$ticker[3], "RF Prediction Explained") +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    legend.position = "none",
+    axis.text.y = element_text(
+      family = "Times New Roman",
+      size = 10
+    ),
+    axis.text.x = element_text(
+      family = "Times New Roman",
+      size = 12,
+      hjust = 0.5
+    ),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
 ```
 
 
@@ -821,14 +1097,226 @@ tibble(
 <div class="column-right-even">
 
 ```{r}
-py$new_shap_rf %>%
-  as.data.frame() %>%
-  magrittr::set_colnames(colnames(mod_dat %>% select(-response))) %>%
-  mutate(ticker = tickers) %>%
-  pivot_longer(
-    cols = colnames(select(., -ticker)),
-    names_to = "covariate",
-    values_to = "shap_val"
+d <- individual_shap %>%
+  filter(ticker == top_3$ticker[1]) %>%
+  mutate(covariate = forcats::fct_reorder(covariate, shap_val_gb, abs)) %>%
+  arrange(desc(covariate)) %>%
+  mutate(
+    bar_end = cumsum(shap_val_gb) + c(expected_value_gb),
+    bar_start = c(expected_value_gb, head(bar_end, -1)),
+    is_positive = shap_val_gb > 0
+  ) 
+d %>%
+  ggplot() +
+  aes(
+    x = covariate, 
+    xmin = as.numeric(covariate) - 0.25, 
+    xmax = as.numeric(covariate) + 0.25, 
+    ymin = bar_end, 
+    ymax = bar_start, 
+    label = var_val,
+    fill = is_positive
+  ) + 
+  geom_hline(
+    aes(yintercept = expected_value_gb),
+    color = "#849698",
+    size = 1.5
+  ) +
+  geom_rect(stat = "identity") +
+  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  coord_flip(clip = "off") +
+  geom_segment(
+    aes(
+      y = bar_end,
+      yend = bar_end,
+      x = as.numeric(covariate) + 0.25,
+      xend = as.numeric(covariate) - 1.25
+    ),
+    color = "#849698",
+    lwd = 1
+  ) +
+  theme_classic() +
+  geom_hline(
+    aes(yintercept = top_3$pred_gb[1]),
+    color = "#EE964B",
+    size = 1.5
+  ) +
+  scale_y_continuous(
+    breaks = expected_value_gb,
+    labels = str_c("Baseline:\n", round(expected_value_gb * 100, 1), "%"),
+    sec.axis = sec_axis(
+      ~.,
+      breaks = top_3$pred_gb[1],
+      labels = str_c("Model Prediction:\n", round(top_3$pred_gb[1] * 100, 1), "%")
+    )
+  ) +
+  scale_x_discrete(
+    labels = rev(str_c(d$covariate, "\n", signif(d$var_val, 3)))
+  ) +
+  ggtitle(top_3$ticker[1], "GB Prediction Explained") +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    legend.position = "none",
+    axis.text.y = element_text(
+      family = "Times New Roman",
+      size = 10
+    ),
+    axis.text.x = element_text(
+      family = "Times New Roman",
+      size = 12,
+      hjust = 0.5
+    ),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+###########################
+d <- individual_shap %>%
+  filter(ticker == top_3$ticker[2]) %>%
+  mutate(covariate = forcats::fct_reorder(covariate, shap_val_gb, abs)) %>%
+  arrange(desc(covariate)) %>%
+  mutate(
+    bar_end = cumsum(shap_val_gb) + c(expected_value_gb),
+    bar_start = c(expected_value_gb, head(bar_end, -1)),
+    is_positive = shap_val_gb > 0
+  ) 
+d %>%
+  ggplot() +
+  aes(
+    x = covariate, 
+    xmin = as.numeric(covariate) - 0.25, 
+    xmax = as.numeric(covariate) + 0.25, 
+    ymin = bar_end, 
+    ymax = bar_start, 
+    label = var_val,
+    fill = is_positive
+  ) + 
+  geom_hline(
+    aes(yintercept = expected_value_gb),
+    color = "#849698",
+    size = 1.5
+  ) +
+  geom_rect(stat = "identity") +
+  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  coord_flip(clip = "off") +
+  geom_segment(
+    aes(
+      y = bar_end,
+      yend = bar_end,
+      x = as.numeric(covariate) + 0.25,
+      xend = as.numeric(covariate) - 1.25
+    ),
+    color = "#849698",
+    lwd = 1
+  ) +
+  theme_classic() +
+  geom_hline(
+    aes(yintercept = top_3$pred_gb[2]),
+    color = "#EE964B",
+    size = 1.5
+  ) +
+  scale_y_continuous(
+    breaks = expected_value_gb,
+    labels = str_c("Baseline:\n", round(expected_value_gb * 100, 1), "%"),
+    sec.axis = sec_axis(
+      ~.,
+      breaks = top_3$pred_gb[2],
+      labels = str_c("Model Prediction:\n", round(top_3$pred_gb[2] * 100, 1), "%")
+    )
+  ) +
+  scale_x_discrete(
+    labels = rev(str_c(d$covariate, "\n", signif(d$var_val, 3)))
+  ) +
+  ggtitle(top_3$ticker[2], "GB Prediction Explained") +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    legend.position = "none",
+    axis.text.y = element_text(
+      family = "Times New Roman",
+      size = 10
+    ),
+    axis.text.x = element_text(
+      family = "Times New Roman",
+      size = 12,
+      hjust = 0.5
+    ),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+#############################
+d <- individual_shap %>%
+  filter(ticker == top_3$ticker[3]) %>%
+  mutate(covariate = forcats::fct_reorder(covariate, shap_val_gb, abs)) %>%
+  arrange(desc(covariate)) %>%
+  mutate(
+    bar_end = cumsum(shap_val_gb) + c(expected_value_gb),
+    bar_start = c(expected_value_gb, head(bar_end, -1)),
+    is_positive = shap_val_gb > 0
+  ) 
+d %>%
+  ggplot() +
+  aes(
+    x = covariate, 
+    xmin = as.numeric(covariate) - 0.25, 
+    xmax = as.numeric(covariate) + 0.25, 
+    ymin = bar_end, 
+    ymax = bar_start, 
+    label = var_val,
+    fill = is_positive
+  ) + 
+  geom_hline(
+    aes(yintercept = expected_value_gb),
+    color = "#849698",
+    size = 1.5
+  ) +
+  geom_rect(stat = "identity") +
+  scale_fill_manual(values = c("#A54657", "#0D3B66")) +
+  coord_flip(clip = "off") +
+  geom_segment(
+    aes(
+      y = bar_end,
+      yend = bar_end,
+      x = as.numeric(covariate) + 0.25,
+      xend = as.numeric(covariate) - 1.25
+    ),
+    color = "#849698",
+    lwd = 1
+  ) +
+  theme_classic() +
+  geom_hline(
+    aes(yintercept = top_3$pred_gb[3]),
+    color = "#EE964B",
+    size = 1.5
+  ) +
+  scale_y_continuous(
+    breaks = expected_value_gb,
+    labels = str_c("Baseline:\n", round(expected_value_gb * 100, 1), "%"),
+    sec.axis = sec_axis(
+      ~.,
+      breaks = top_3$pred_gb[3],
+      labels = str_c("Model Prediction:\n", round(top_3$pred_gb[3] * 100, 1), "%")
+    )
+  ) +
+  scale_x_discrete(
+    labels = rev(str_c(d$covariate, "\n", signif(d$var_val, 3)))
+  ) +
+  ggtitle(top_3$ticker[3], "GB Prediction Explained") +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    legend.position = "none",
+    axis.text.y = element_text(
+      family = "Times New Roman",
+      size = 10
+    ),
+    axis.text.x = element_text(
+      family = "Times New Roman",
+      size = 12,
+      hjust = 0.5
+    ),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
   )
 ```
 
