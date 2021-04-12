@@ -36,7 +36,7 @@ beepr::beep(9)
 toc()
 
 tic("Finish the Industries")
-subset <- abbr$industry_name[125:129]
+subset <- abbr$industry_name[130:149]
 test <- purrr::map(
   .x = subset,
   .f = tune_growth_models
