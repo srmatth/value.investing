@@ -6,7 +6,7 @@ library(fs)
 
 industries <- path_file(dir_ls("data/growth_models"))
 
-for (i in industries[1:5]) {
+for (i in industries) {
   tryCatch({
     logger::log_info("Creating Markdown for {i}")
     suppressMessages(
