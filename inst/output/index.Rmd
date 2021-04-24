@@ -1,0 +1,209 @@
+---
+title: "Industry Models - 5 Year Growth"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(shiny)
+library(fs)
+library(dplyr)
+library(stringr)
+```
+
+```{r}
+# choices = dir_ls(".") %>% 
+#     path_file() %>% 
+#     str_subset("index", negate = TRUE) %>%
+#     str_remove("\\.html")
+# purrr::map(
+#   .x = choices,
+#   .f = ~{
+#     opt <- str_c("<option value='", .x, ".html'>", .x, "</option>\n")
+#     cat(opt)
+#     return(invisible(NULL))
+#   }
+# )
+```
+
+<style>
+h1.title {
+  text-align:center;
+  font-family: Times New Roman;
+}
+h3.subtitle {
+  text-align:center;
+  font-family: Times New Roman;
+}
+</style>
+
+```{r}
+tags$p(
+  "The point of this webpage is easy viewing of the reports created by the functions and modelling techniques in the `{value.investing}` package. It does not constitute professional investment advice and is more of an exercise in modelling than finance.  All models are created so as to predict the growth that will occur in the next five years based on information from a single quarter.",
+  style = "font-family: Times New Roman; font-size: 14px;"
+)
+```
+
+
+<select id='industry'>
+<option value=''>Select an Industry</option>
+<option value='Advertising Agencies.html'>Advertising Agencies</option>
+<option value='Aerospace & Defense.html'>Aerospace & Defense</option>
+<option value='Agricultural Inputs.html'>Agricultural Inputs</option>
+<option value='Airlines.html'>Airlines</option>
+<option value='Airports & Air Services.html'>Airports & Air Services</option>
+<option value='Aluminum.html'>Aluminum</option>
+<option value='Apparel Manufacturing.html'>Apparel Manufacturing</option>
+<option value='Apparel Retail.html'>Apparel Retail</option>
+<option value='Asset Management.html'>Asset Management</option>
+<option value='Auto & Truck Dealerships.html'>Auto & Truck Dealerships</option>
+<option value='Auto Manufacturers.html'>Auto Manufacturers</option>
+<option value='Auto Parts.html'>Auto Parts</option>
+<option value='Banks - Diversified.html'>Banks - Diversified</option>
+<option value='Beverages - Brewers.html'>Beverages - Brewers</option>
+<option value='Beverages - Non-Alcoholic.html'>Beverages - Non-Alcoholic</option>
+<option value='Beverages - Wineries & Distilleries.html'>Beverages - Wineries & Distilleries</option>
+<option value='Biotechnology.html'>Biotechnology</option>
+<option value='Broadcasting.html'>Broadcasting</option>
+<option value='Building Materials.html'>Building Materials</option>
+<option value='Building Products & Equipment.html'>Building Products & Equipment</option>
+<option value='Business Equipment & Supplies.html'>Business Equipment & Supplies</option>
+<option value='Capital Markets.html'>Capital Markets</option>
+<option value='Chemicals.html'>Chemicals</option>
+<option value='Closed-End Fund - Debt.html'>Closed-End Fund - Debt</option>
+<option value='Closed-End Fund - Equity.html'>Closed-End Fund - Equity</option>
+<option value='Closed-End Fund - Foreign.html'>Closed-End Fund - Foreign</option>
+<option value='Coking Coal.html'>Coking Coal</option>
+<option value='Communication Equipment.html'>Communication Equipment</option>
+<option value='Computer Hardware.html'>Computer Hardware</option>
+<option value='Confectioners.html'>Confectioners</option>
+<option value='Conglomerates.html'>Conglomerates</option>
+<option value='Consulting Services.html'>Consulting Services</option>
+<option value='Consumer Electronics.html'>Consumer Electronics</option>
+<option value='Copper.html'>Copper</option>
+<option value='Credit Services.html'>Credit Services</option>
+<option value='Department Stores.html'>Department Stores</option>
+<option value='Diagnostics & Research.html'>Diagnostics & Research</option>
+<option value='Discount Stores.html'>Discount Stores</option>
+<option value='Drug Manufacturers - General.html'>Drug Manufacturers - General</option>
+<option value='Drug Manufacturers - Specialty & Generic.html'>Drug Manufacturers - Specialty & Generic</option>
+<option value='Education & Training Services.html'>Education & Training Services</option>
+<option value='Electrical Equipment & Parts.html'>Electrical Equipment & Parts</option>
+<option value='Electronic Components.html'>Electronic Components</option>
+<option value='Electronic Gaming & Multimedia.html'>Electronic Gaming & Multimedia</option>
+<option value='Electronics & Computer Distribution.html'>Electronics & Computer Distribution</option>
+<option value='Engineering & Construction.html'>Engineering & Construction</option>
+<option value='Entertainment.html'>Entertainment</option>
+<option value='Farm & Heavy Construction Machinery.html'>Farm & Heavy Construction Machinery</option>
+<option value='Farm Products.html'>Farm Products</option>
+<option value='Financial Conglomerates.html'>Financial Conglomerates</option>
+<option value='Financial Data & Stock Exchanges.html'>Financial Data & Stock Exchanges</option>
+<option value='Food Distribution.html'>Food Distribution</option>
+<option value='Footwear & Accessories.html'>Footwear & Accessories</option>
+<option value='Furnishings, Fixtures & Appliances.html'>Furnishings, Fixtures & Appliances</option>
+<option value='Gambling.html'>Gambling</option>
+<option value='Gold.html'>Gold</option>
+<option value='Grocery Stores.html'>Grocery Stores</option>
+<option value='Health Information Services.html'>Health Information Services</option>
+<option value='Healthcare Plans.html'>Healthcare Plans</option>
+<option value='Home Improvement Retail.html'>Home Improvement Retail</option>
+<option value='Household & Personal Products.html'>Household & Personal Products</option>
+<option value='Industrial Distribution.html'>Industrial Distribution</option>
+<option value='Information Technology Services.html'>Information Technology Services</option>
+<option value='Insurance - Diversified.html'>Insurance - Diversified</option>
+<option value='Insurance - Life.html'>Insurance - Life</option>
+<option value='Insurance - Property & Casualty.html'>Insurance - Property & Casualty</option>
+<option value='Insurance - Reinsurance.html'>Insurance - Reinsurance</option>
+<option value='Insurance - Specialty.html'>Insurance - Specialty</option>
+<option value='Insurance Brokers.html'>Insurance Brokers</option>
+<option value='Integrated Freight & Logistics.html'>Integrated Freight & Logistics</option>
+<option value='Internet Content & Information.html'>Internet Content & Information</option>
+<option value='Internet Retail.html'>Internet Retail</option>
+<option value='Leisure.html'>Leisure</option>
+<option value='Lodging.html'>Lodging</option>
+<option value='Lumber & Wood Production.html'>Lumber & Wood Production</option>
+<option value='Luxury Goods.html'>Luxury Goods</option>
+<option value='Marine Shipping.html'>Marine Shipping</option>
+<option value='Medical Care Facilities.html'>Medical Care Facilities</option>
+<option value='Medical Devices.html'>Medical Devices</option>
+<option value='Medical Distribution.html'>Medical Distribution</option>
+<option value='Medical Instruments & Supplies.html'>Medical Instruments & Supplies</option>
+<option value='Metal Fabrication.html'>Metal Fabrication</option>
+<option value='Mortgage Finance.html'>Mortgage Finance</option>
+<option value='Oil & Gas Drilling.html'>Oil & Gas Drilling</option>
+<option value='Oil & Gas E&P.html'>Oil & Gas E&P</option>
+<option value='Oil & Gas Equipment & Services.html'>Oil & Gas Equipment & Services</option>
+<option value='Oil & Gas Integrated.html'>Oil & Gas Integrated</option>
+<option value='Oil & Gas Midstream.html'>Oil & Gas Midstream</option>
+<option value='Oil & Gas Refining & Marketing.html'>Oil & Gas Refining & Marketing</option>
+<option value='Other Industrial Metals & Mining.html'>Other Industrial Metals & Mining</option>
+<option value='Other Precious Metals & Mining.html'>Other Precious Metals & Mining</option>
+<option value='Packaged Foods.html'>Packaged Foods</option>
+<option value='Packaging & Containers.html'>Packaging & Containers</option>
+<option value='Paper & Paper Products.html'>Paper & Paper Products</option>
+<option value='Personal Services.html'>Personal Services</option>
+<option value='Pharmaceutical Retailers.html'>Pharmaceutical Retailers</option>
+<option value='Pollution & Treatment Controls.html'>Pollution & Treatment Controls</option>
+<option value='Publishing.html'>Publishing</option>
+<option value='REIT - Diversified.html'>REIT - Diversified</option>
+<option value='REIT - Healthcare Facilities.html'>REIT - Healthcare Facilities</option>
+<option value='REIT - Hotel & Motel.html'>REIT - Hotel & Motel</option>
+<option value='REIT - Industrial.html'>REIT - Industrial</option>
+<option value='REIT - Mortgage.html'>REIT - Mortgage</option>
+<option value='REIT - Office.html'>REIT - Office</option>
+<option value='REIT - Residential.html'>REIT - Residential</option>
+<option value='REIT - Retail.html'>REIT - Retail</option>
+<option value='REIT - Specialty.html'>REIT - Specialty</option>
+<option value='Railroads.html'>Railroads</option>
+<option value='Real Estate - Development.html'>Real Estate - Development</option>
+<option value='Real Estate - Diversified.html'>Real Estate - Diversified</option>
+<option value='Real Estate Services.html'>Real Estate Services</option>
+<option value='Recreational Vehicles.html'>Recreational Vehicles</option>
+<option value='Rental & Leasing Services.html'>Rental & Leasing Services</option>
+<option value='Residential Construction.html'>Residential Construction</option>
+<option value='Resorts & Casinos.html'>Resorts & Casinos</option>
+<option value='Restaurants.html'>Restaurants</option>
+<option value='Scientific & Technical Instruments.html'>Scientific & Technical Instruments</option>
+<option value='Security & Protection Services.html'>Security & Protection Services</option>
+<option value='Semiconductor Equipment & Materials.html'>Semiconductor Equipment & Materials</option>
+<option value='Semiconductors.html'>Semiconductors</option>
+<option value='Silver.html'>Silver</option>
+<option value='Software - Application.html'>Software - Application</option>
+<option value='Software - Infrastructure.html'>Software - Infrastructure</option>
+<option value='Solar.html'>Solar</option>
+<option value='Specialty Business Services.html'>Specialty Business Services</option>
+<option value='Specialty Chemicals.html'>Specialty Chemicals</option>
+<option value='Specialty Industrial Machinery.html'>Specialty Industrial Machinery</option>
+<option value='Specialty Retail.html'>Specialty Retail</option>
+<option value='Staffing & Employment Services.html'>Staffing & Employment Services</option>
+<option value='Steel.html'>Steel</option>
+<option value='Telecom Services.html'>Telecom Services</option>
+<option value='Textile Manufacturing.html'>Textile Manufacturing</option>
+<option value='Thermal Coal.html'>Thermal Coal</option>
+<option value='Tobacco.html'>Tobacco</option>
+<option value='Tools & Accessories.html'>Tools & Accessories</option>
+<option value='Travel Services.html'>Travel Services</option>
+<option value='Trucking.html'>Trucking</option>
+<option value='Uranium.html'>Uranium</option>
+<option value='Utilities - Diversified.html'>Utilities - Diversified</option>
+<option value='Utilities - Independent Power Producers.html'>Utilities - Independent Power Producers</option>
+<option value='Utilities - Regulated Electric.html'>Utilities - Regulated Electric</option>
+<option value='Utilities - Regulated Gas.html'>Utilities - Regulated Gas</option>
+<option value='Utilities - Regulated Water.html'>Utilities - Regulated Water</option>
+<option value='Utilities - Renewable.html'>Utilities - Renewable</option>
+<option value='Waste Management.html'>Waste Management</option>
+</select>
+
+<script type='text/javascript'>
+    $(document).ready(function(){
+        $("#industry").on("change", function(){
+            var link = $(this).find("option:selected").val();
+            $("#iframe1").attr("src", link);
+         });                        
+
+     });
+ </script>
+ 
+ <iframe id="iframe1" width="100%" height="1000px">
+ 
+ </iframe>
