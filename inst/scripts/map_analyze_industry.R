@@ -1,6 +1,10 @@
+devtools::load_all()
+
+
+abbr <- get_industry_abbreviations()
+
+
 purrr::map(
-  .x = c("trucking",
-         "steel",
-         "banksdiversified"),
+  .x = abbr$abbreviation[1],
   .f = analyze_industry
 )
